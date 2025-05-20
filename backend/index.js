@@ -14,7 +14,7 @@ const app = express();
 app.use(cors({
   // Allow requests from these origins (add your frontend URL)
   origin: [
-    'https://frontend-notes-febrian-dot-g-09-450802.uc.r.appspot.com',
+    'https://frontend-bakery-dot-g-09-450802.uc.r.appspot.com',
     'http://localhost:3000'
   ],
   // Allow credentials (cookies)
