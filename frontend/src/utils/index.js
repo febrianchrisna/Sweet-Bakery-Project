@@ -1,5 +1,5 @@
 // API base URL
-export const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+export const BASE_URL = process.env.REACT_APP_API_URL || 'https://bakery-be-663618957788.us-central1.run.app';
 
 // Format currency
 export const formatCurrency = (amount) => {
