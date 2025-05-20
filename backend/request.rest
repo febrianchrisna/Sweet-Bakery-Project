@@ -1,0 +1,121 @@
+### Health Check
+GET http://localhost:5000/health
+
+### IMPORTANT: Before running these requests, make sure to set up your .env file with JWT secrets
+# Create a .env file in the backend directory with the following variables:
+# ACCESS_TOKEN_SECRET=your_access_token_secret_here
+# REFRESH_TOKEN_SECRET=your_refresh_token_secret_here
+# 
+# You can generate secure random strings for these secrets using Node.js:
+# node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+### Register User
+POST http://localhost:5000/register
+Content-Type: application/json
+
+{
+    "email": "customer@example.com",
+    "username": "customer",
+    "password": "password123"
+}
+
+### Register Admin
+POST http://localhost:5000/register
+Content-Type: application/json
+
+{
+    "email": "admin@example.com",
+    "username": "admin",
+    "password": "admin123",
+    "role": "admin"
+}
+
+### Login
+POST http://localhost:5000/login
+Content-Type: application/json
+
+{
+    "email": "admin@example.com",
+    "password": "admin123"
+}
+
+### Get Products (Public)
+GET http://localhost:5000/products
+
+### Get Products by Category
+GET http://localhost:5000/products?category=Bread
+
+### Get Featured Products
+GET http://localhost:5000/products?featured=true
+
+### Get Product by ID
+GET http://localhost:5000/products/1
+
+### Get Product Categories
+GET http://localhost:5000/products/categories
+
+### Create Product (Admin only)
+POST http://localhost:5000/products
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+    "name": "Chocolate Croissant",
+    "description": "Buttery croissant filled with rich chocolate",
+    "price": 15000,
+    "category": "Pastry",
+    "featured": true,
+    "stock": 20,
+    "image": "chocolate-croissant.jpg"
+}
+
+### Update Product (Admin only)
+PUT http://localhost:5000/products/1
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+    "price": 18000,
+    "stock": 15
+}
+
+### Delete Product (Admin only)
+DELETE http://localhost:5000/products/1
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### Get All Orders (Admin only)
+GET http://localhost:5000/orders
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### Get User Orders (Customer)
+GET http://localhost:5000/user/orders
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### Get Order by ID
+GET http://localhost:5000/orders/1
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### Create Order
+POST http://localhost:5000/orders
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+    "items": [
+        {"productId": 1, "quantity": 2},
+        {"productId": 3, "quantity": 1}
+    ],
+    "shipping_address": "123 Customer Street, City",
+    "payment_method": "Cash on Delivery"
+}
+
+### Update Order Status (Admin only)
+PUT http://localhost:5000/orders/1/status
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+    "status": "processing"
+}
+
+
