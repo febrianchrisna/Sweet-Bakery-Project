@@ -200,4 +200,124 @@ async function logout(req, res) {
   }
 }
 
-export { login, logout, getUser, register };
+// Update user profile (username and password)
+async function updateProfile(req, res) {
+  try {
+    const userId = req.userId; // From the token
+    const { username, password, currentPassword } = req.body;
+    
+    // Find the user
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: "Error",
+        message: "User not found"
+      });
+    }
+    
+    // Prepare update data
+    const updateData = {};
+    
+    // Update username if provided
+    if (username) {
+      updateData.username = username;
+    }
+    
+    // Update password if provided (requires current password verification)
+    if (password) {
+      // Verify current password if changing password
+      if (!currentPassword) {
+        return res.status(400).json({
+          status: "Error",
+          message: "Current password is required to change password"
+        });
+      }
+      
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({
+          status: "Error",
+          message: "Current password is incorrect"
+        });
+      }
+      
+      // Hash new password
+      updateData.password = await bcrypt.hash(password, 5);
+    }
+    
+    // If no updates provided
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        status: "Error",
+        message: "No update data provided"
+      });
+    }
+    
+    // Update the user
+    await User.update(updateData, {
+      where: { id: userId }
+    });
+    
+    // Fetch updated user data
+    const updatedUser = await User.findByPk(userId, {
+      attributes: ['id', 'email', 'username', 'role']
+    });
+    
+    res.status(200).json({
+      status: "Success",
+      message: "Profile updated successfully",
+      data: updatedUser
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: "Error",
+      message: error.message
+    });
+  }
+}
+
+// Delete user (admin only)
+async function deleteUser(req, res) {
+  try {
+    const userIdToDelete = req.params.id;
+    
+    // Check if user exists
+    const userToDelete = await User.findByPk(userIdToDelete);
+    
+    if (!userToDelete) {
+      return res.status(404).json({
+        status: "Error",
+        message: "User not found"
+      });
+    }
+    
+    // Don't allow admins to delete themselves
+    if (req.userId == userIdToDelete) {
+      return res.status(400).json({
+        status: "Error",
+        message: "You cannot delete your own account"
+      });
+    }
+    
+    // Delete the user
+    await User.destroy({
+      where: { id: userIdToDelete }
+    });
+    
+    res.status(200).json({
+      status: "Success",
+      message: "User deleted successfully"
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: "Error",
+      message: error.message
+    });
+  }
+}
+
+export { login, logout, getUser, register, updateProfile, deleteUser };

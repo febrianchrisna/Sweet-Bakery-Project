@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, logout, getUser } from '../controller/UserController.js';
+import { login, register, logout, getUser, updateProfile, deleteUser } from '../controller/UserController.js';
 import { 
     getProducts, getProductById, createProduct, 
     updateProduct, deleteProduct, getCategories 
@@ -19,9 +19,14 @@ router.post("/register", register);
 router.get("/logout", verifyToken, logout);
 router.get("/token", refreshToken);
 
+// ==================== USER PROFILE ROUTES ====================
+// Update profile (all authenticated users)
+router.put("/profile", verifyToken, updateProfile);
+
 // ==================== ADMIN ROUTES (khusus admin) ====================
 // User management (admin only)
 router.get("/users", verifyToken, isAdmin, getUser);
+router.delete("/users/:id", verifyToken, isAdmin, deleteUser);
 
 // Product management (admin only)
 router.get("/products", getProducts);
