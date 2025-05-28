@@ -1,5 +1,82 @@
-// API base URL
-export const BASE_URL = process.env.REACT_APP_API_URL || 'https://bakery-be-663618957788.us-central1.run.app';
+import axios from 'axios';
+
+// Base URL for the API
+export const BASE_URL = 'https://bakery-be-663618957788.us-central1.run.app';
+
+// Configure axios with interceptors for authentication
+export const setupAxiosInterceptors = () => {
+  // Request interceptor - add authorization header to every request
+  axios.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      config.withCredentials = true;
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
+
+  // Response interceptor - handle token refresh or logout on auth errors
+  axios.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+      
+      // If error is 401 Unauthorized and not a retry
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+        
+        try {
+          // Try to refresh token
+          const refreshToken = localStorage.getItem('refresh_token');
+          if (refreshToken) {
+            const response = await axios.post(
+              `${BASE_URL}/token`,
+              { refreshToken },
+              { withCredentials: true }
+            );
+            
+            if (response.data.accessToken) {
+              // Store new token
+              localStorage.setItem('auth_token', response.data.accessToken);
+              
+              // Update authorization header
+              originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`;
+              
+              // Retry the original request
+              return axios(originalRequest);
+            }
+          }
+          
+          // If refresh failed, log user out
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('auth_user');
+          
+          // Redirect to login page
+          window.location.href = '/login';
+          
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          
+          // Clear authentication data
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('auth_user');
+          
+          // Redirect to login page
+          window.location.href = '/login';
+        }
+      }
+      
+      return Promise.reject(error);
+    }
+  );
+};
 
 // Format currency
 export const formatCurrency = (amount) => {

@@ -1,11 +1,12 @@
 import { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_URL } from '../../utils';
 import { AuthContext } from '../../context/AuthContext';
 
 const AdminDashboard = () => {
-  const { user: currentUser } = useContext(AuthContext);
+  const { user: currentUser, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
@@ -315,27 +316,43 @@ const AdminDashboard = () => {
         setLoading(false);
       } catch (err) {
         console.error('Error fetching admin stats:', err);
-        setError('Failed to load dashboard data. Please try again later.');
+        
+        // Handle authentication errors
+        if (err.response?.status === 401) {
+          setError('Your session has expired. Please log in again.');
+          // Log out user and redirect to login
+          setTimeout(() => {
+            logout();
+            navigate('/login');
+          }, 3000);
+        } else {
+          setError('Failed to load dashboard data. Please try again later.');
+        }
+        
         setLoading(false);
       }
     };
 
     fetchStats();
-  }, []);
+  }, [logout, navigate]);
 
   // Add function to fetch users
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setUsersLoading(true);
-        const response = await axios.get(`${BASE_URL}/users`, {
-          withCredentials: true
-        });
+        const response = await axios.get(`${BASE_URL}/users`);
         setUsers(response.data);
         setUsersLoading(false);
       } catch (err) {
         console.error('Error fetching users:', err);
-        setUserError('Failed to load users. Please try again later.');
+        
+        if (err.response?.status === 401) {
+          setUserError('Authentication error. Please log in again.');
+        } else {
+          setUserError('Failed to load users. Please try again later.');
+        }
+        
         setUsersLoading(false);
       }
     };
@@ -375,9 +392,7 @@ const AdminDashboard = () => {
     
     try {
       setActionLoading(userId);
-      await axios.delete(`${BASE_URL}/users/${userId}`, {
-        withCredentials: true
-      });
+      await axios.delete(`${BASE_URL}/users/${userId}`);
       
       // Update users list
       setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
@@ -389,7 +404,18 @@ const AdminDashboard = () => {
       setActionLoading(null);
     } catch (err) {
       console.error('Error deleting user:', err);
-      setUserError(err.response?.data?.message || 'Failed to delete user. Please try again.');
+      
+      if (err.response?.status === 401) {
+        setUserError('Your session has expired. Please log in again.');
+        // Log out user and redirect to login after a delay
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 3000);
+      } else {
+        setUserError(err.response?.data?.message || 'Failed to delete user. Please try again.');
+      }
+      
       setTimeout(() => setUserError(null), 3000);
       setActionLoading(null);
     }

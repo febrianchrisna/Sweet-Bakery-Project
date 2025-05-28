@@ -4,6 +4,8 @@ import { CartProvider } from "./context/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import Layout from "./components/Layout";
+import { useEffect } from "react";
+import { setupAxiosInterceptors } from './utils';
 
 // Pages
 import Home from "./pages/Home";
@@ -23,6 +25,11 @@ import Profile from "./pages/Profile";
 import AdminUsers from "./pages/admin/Users";
 
 function App() {
+  // Set up axios interceptors when the app mounts
+  useEffect(() => {
+    setupAxiosInterceptors();
+  }, []);
+
   return (
     <AuthProvider>
       <CartProvider>
