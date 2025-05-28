@@ -1,17 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_URL } from '../../utils';
+import { AuthContext } from '../../context/AuthContext';
 
 const AdminDashboard = () => {
+  const { user: currentUser } = useContext(AuthContext);
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
     pendingOrders: 0,
     recentOrders: []
   });
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userError, setUserError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   // Modern bakery design styles
   const styles = {
@@ -316,6 +323,26 @@ const AdminDashboard = () => {
     fetchStats();
   }, []);
 
+  // Add function to fetch users
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setUsersLoading(true);
+        const response = await axios.get(`${BASE_URL}/users`, {
+          withCredentials: true
+        });
+        setUsers(response.data);
+        setUsersLoading(false);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        setUserError('Failed to load users. Please try again later.');
+        setUsersLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
   // Helper function to format date
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
@@ -333,6 +360,41 @@ const AdminDashboard = () => {
     }
   };
 
+  // Helper function to handle user deletion
+  const handleDeleteUser = async (userId) => {
+    // Don't allow admins to delete themselves
+    if (userId === currentUser.id) {
+      setUserError("You cannot delete your own account");
+      setTimeout(() => setUserError(null), 3000);
+      return;
+    }
+    
+    if (!window.confirm(`Are you sure you want to delete this user? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      setActionLoading(userId);
+      await axios.delete(`${BASE_URL}/users/${userId}`, {
+        withCredentials: true
+      });
+      
+      // Update users list
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+      
+      // Show success message
+      setSuccessMessage(`User deleted successfully`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      setActionLoading(null);
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setUserError(err.response?.data?.message || 'Failed to delete user. Please try again.');
+      setTimeout(() => setUserError(null), 3000);
+      setActionLoading(null);
+    }
+  };
+
   return (
     <div style={styles.dashboardContainer}>
       <div style={styles.header}>
@@ -346,7 +408,7 @@ const AdminDashboard = () => {
       
       {!loading && !error && (
         <>
-          {/* Admin Navigation Menu */}
+          {/* Admin Navigation Menu - Remove Users link */}
           <div style={styles.adminNav}>
             <h3 style={styles.navTitle}>Admin Menu</h3>
             <div style={styles.navLinks}>
@@ -370,13 +432,6 @@ const AdminDashboard = () => {
                 className={window.location.pathname === '/admin/orders' ? 'active' : ''}
               >
                 Orders
-              </Link>
-              <Link 
-                to="/admin/users" 
-                style={styles.navLink}
-                className={window.location.pathname === '/admin/users' ? 'active' : ''}
-              >
-                Users
               </Link>
             </div>
           </div>
@@ -583,10 +638,124 @@ const AdminDashboard = () => {
               )}
             </div>
           </div>
+          
+          {/* User Management Section - Added below Recent Orders */}
+          <div style={styles.recentActivitySection}>
+            <div style={styles.sectionHeader}>
+              <h2 style={styles.sectionTitle}>User Management</h2>
+            </div>
+            
+            <div style={styles.sectionContent}>
+              {successMessage && <div style={styles.successMessage}>{successMessage}</div>}
+              {userError && <div style={styles.errorMessage}>{userError}</div>}
+              
+              {usersLoading ? (
+                <div style={styles.loadingContainer}>Loading users...</div>
+              ) : users.length === 0 ? (
+                <div style={styles.noOrders}>No users found</div>
+              ) : (
+                <div style={styles.tableContainer}>
+                  <table style={styles.table}>
+                    <thead style={styles.tableHeader}>
+                      <tr>
+                        <th style={styles.tableHeaderCell}>ID</th>
+                        <th style={styles.tableHeaderCell}>Username</th>
+                        <th style={styles.tableHeaderCell}>Email</th>
+                        <th style={styles.tableHeaderCell}>Role</th>
+                        <th style={styles.tableHeaderCell}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(user => (
+                        <tr 
+                          key={user.id} 
+                          style={styles.tableRow}
+                          onMouseOver={e => {
+                            e.currentTarget.style.backgroundColor = styles.tableRowHover.backgroundColor;
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <td style={styles.tableCell}>{user.id}</td>
+                          <td style={styles.tableCell}>{user.username}</td>
+                          <td style={styles.tableCell}>{user.email}</td>
+                          <td style={styles.tableCell}>
+                            <span style={{
+                              ...styles.statusBadge, 
+                              ...(user.role === 'admin' ? 
+                                {backgroundColor: 'rgba(244, 67, 54, 0.15)', color: '#D32F2F'} : 
+                                {backgroundColor: 'rgba(33, 150, 243, 0.15)', color: '#1976D2'})
+                            }}>
+                              {user.role === 'admin' ? 'Admin' : 'Customer'}
+                            </span>
+                          </td>
+                          <td style={styles.tableCell}>
+                            <button 
+                              onClick={() => handleDeleteUser(user.id)}
+                              style={{
+                                padding: '8px 15px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                fontSize: '0.9rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                color: '#D32F2F',
+                                opacity: (actionLoading === user.id || user.id === currentUser.id) ? 0.5 : 1,
+                                cursor: (actionLoading === user.id || user.id === currentUser.id) ? 'not-allowed' : 'pointer'
+                              }}
+                              disabled={actionLoading === user.id || user.id === currentUser.id}
+                              onMouseOver={e => {
+                                if (actionLoading !== user.id && user.id !== currentUser.id) {
+                                  e.target.style.backgroundColor = 'rgba(244, 67, 54, 0.2)';
+                                }
+                              }}
+                              onMouseOut={e => {
+                                if (actionLoading !== user.id && user.id !== currentUser.id) {
+                                  e.target.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
+                                }
+                              }}
+                            >
+                              {actionLoading === user.id ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
         </>
       )}
     </div>
   );
+};
+
+// Add these styles to the styles object
+const additionalStyles = {
+  // User management specific styles
+  successMessage: {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    color: '#388E3C',
+    padding: '15px 20px',
+    borderRadius: '8px',
+    margin: '20px',
+    fontSize: '0.95rem',
+    borderLeft: '4px solid #388E3C',
+  },
+  errorMessage: {
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    color: '#D32F2F',
+    padding: '15px 20px',
+    borderRadius: '8px',
+    margin: '20px',
+    fontSize: '0.95rem',
+    borderLeft: '4px solid #D32F2F',
+  },
 };
 
 export default AdminDashboard;
