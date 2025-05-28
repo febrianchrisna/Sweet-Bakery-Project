@@ -25,7 +25,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Parse cookies
+// Parse cookies - set proper options
 app.use(cookieParser());
 
 // Parse JSON bodies

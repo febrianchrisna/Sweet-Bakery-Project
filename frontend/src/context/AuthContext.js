@@ -56,19 +56,32 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
+  // Configure axios globally to include credentials for all requests
+  useEffect(() => {
+    axios.defaults.withCredentials = true;
+  }, []);
+
   // Login function
   const login = async (email, password) => {
     try {
       setAuthError('');
+      
+      // Make sure withCredentials is true to receive cookies
       const response = await axios.post(
         `${BASE_URL}/login`,
         { email, password },
-        { withCredentials: true }  // Important: enable cookies
+        { withCredentials: true }
       );
 
       if (response.data.status === "Success") {
-        // Store user info in localStorage but not tokens
+        // Store user data in localStorage
         localStorage.setItem('auth_user', JSON.stringify(response.data.safeUserData));
+        
+        // For fallback, store tokens in case cookies don't work
+        if (response.data.accessToken) {
+          localStorage.setItem('auth_token', response.data.accessToken);
+          setToken(response.data.accessToken);
+        }
         
         // Update state
         setUser(response.data.safeUserData);
@@ -110,25 +123,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Configure axios globally to include credentials
-  useEffect(() => {
-    axios.defaults.withCredentials = true;
-  }, []);
-
   // Logout function
   const logout = async () => {
     try {
+      // Make sure withCredentials is true to send cookies
       await axios.get(`${BASE_URL}/logout`, { 
         withCredentials: true 
       });
       
       // Clear auth state
+      setToken(null);
       setUser(null);
       setIsAuthenticated(false);
       setIsAdmin(false);
       
-      // Remove user data from localStorage
+      // Remove from localStorage
+      localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
+      localStorage.removeItem('refresh_token');
+      
+      // Clear Authorization header
+      delete axios.defaults.headers.common['Authorization'];
       
     } catch (error) {
       console.error('Logout failed:', error);

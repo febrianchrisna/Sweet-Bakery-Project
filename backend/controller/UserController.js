@@ -111,25 +111,31 @@ async function login(req, res) {
             }
           );
   
-          // Set both tokens as HttpOnly cookies
+          // Set access token in cookie - with more permissive settings
           res.cookie("access_token", accessToken, {
             httpOnly: true,
-            sameSite: "none",
+            sameSite: "lax", // Changed from "none" to "lax"
             maxAge: 30 * 60 * 1000, // 30 minutes
-            secure: true,
+            secure: process.env.NODE_ENV === "production", // Only secure in production
+            path: "/"
           });
 
+          // Set refresh token in cookie
           res.cookie("refresh_token", refreshToken, {
             httpOnly: true,
-            sameSite: "none",
+            sameSite: "lax", // Changed from "none" to "lax"
             maxAge: 24 * 60 * 60 * 1000, // 1 day
-            secure: true,
+            secure: process.env.NODE_ENV === "production", // Only secure in production
+            path: "/"
           });
   
+          // Also send tokens in response body as fallback
           res.status(200).json({
             status: "Success",
             message: "Login Successful",
             safeUserData,
+            accessToken,
+            refreshToken
           });
         } else {
           const error = new Error("Password or email incorrect");
@@ -166,9 +172,20 @@ async function logout(req, res) {
       );
     }
     
-    // Clear cookies
-    res.clearCookie("access_token");
-    res.clearCookie("refresh_token");
+    // Clear cookies with the same settings that were used to set them
+    res.clearCookie("access_token", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/"
+    });
+    
+    res.clearCookie("refresh_token", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/"
+    });
     
     res.status(200).json({
       status: "Success",
