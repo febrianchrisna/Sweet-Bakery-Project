@@ -96,12 +96,12 @@ export const AuthProvider = ({ children }) => {
         error.response?.data?.message || 
         'Login failed. Please check your credentials and try again.'
       );
-      return false;
+      throw error;
     }
   };
 
   // Register function
-  const register = async (email, username, password) => {
+  const register = async (username, email, password) => {
     try {
       setAuthError('');
       const response = await axios.post(
@@ -119,7 +119,31 @@ export const AuthProvider = ({ children }) => {
         error.response?.data?.message || 
         'Registration failed. Please try again.'
       );
-      return false;
+      throw error;
+    }
+  };
+
+  // Update profile function
+  const updateProfile = async (userData) => {
+    try {
+      setAuthError('');
+      const response = await axios.put(`${BASE_URL}/users/profile`, userData);
+      
+      // If username was updated, update the local user data
+      if (userData.username && userData.username !== user.username) {
+        const updatedUser = {...user, username: userData.username};
+        setUser(updatedUser);
+        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      setAuthError(
+        error.response?.data?.message || 
+        'Failed to update profile. Please try again.'
+      );
+      throw error;
     }
   };
 
@@ -159,6 +183,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateProfile,
     authError,
     token
   };

@@ -200,4 +200,43 @@ async function logout(req, res) {
   }
 }
 
-export { login, logout, getUser, register };
+// Delete user (admin only)
+async function deleteUser(req, res) {
+  try {
+    const userId = req.params.id;
+    
+    // Prevent admin from deleting themselves
+    if (userId == req.userId) {
+      return res.status(400).json({
+        status: "Error",
+        message: "Cannot delete your own account"
+      });
+    }
+    
+    // Find the user to be deleted
+    const userToDelete = await User.findByPk(userId);
+    
+    if (!userToDelete) {
+      return res.status(404).json({
+        status: "Error",
+        message: "User not found"
+      });
+    }
+    
+    // Delete the user
+    await userToDelete.destroy();
+    
+    return res.status(200).json({
+      status: "Success",
+      message: "User deleted successfully"
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      status: "Error",
+      message: error.message || "Failed to delete user"
+    });
+  }
+}
+
+export { login, logout, getUser, register, deleteUser };

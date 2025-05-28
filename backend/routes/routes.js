@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, logout, getUser } from '../controller/UserController.js';
+import { login, register, logout, getUser, updateProfile, deleteUser } from '../controller/UserController.js';
 import { 
     getProducts, getProductById, createProduct, 
     updateProduct, deleteProduct, getCategories 
@@ -22,6 +22,7 @@ router.get("/token", refreshToken);
 // ==================== ADMIN ROUTES (khusus admin) ====================
 // User management (admin only)
 router.get("/users", verifyToken, isAdmin, getUser);
+router.delete("/users/:id", verifyToken, isAdmin, deleteUser);
 
 // Product management (admin only)
 router.get("/products", getProducts);
@@ -35,6 +36,9 @@ router.put("/orders/:id/status", verifyToken, isAdmin, updateOrderStatus);
 router.delete("/orders/:id", verifyToken, isAdmin, deleteUserOrder); // Admin hapus pesanan
 
 // ==================== USER ROUTES (khusus user) ====================
+// User profile management
+router.put("/users/profile", verifyToken, updateProfile);
+
 // Product browsing (user & public)
 router.get("/products/categories", getCategories);
 router.get("/products/:id", getProductById);

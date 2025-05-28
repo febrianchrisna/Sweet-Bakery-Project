@@ -11,6 +11,8 @@ const Register = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
   
   const { register } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -198,19 +200,99 @@ const Register = () => {
     }
   };
 
+  // Add styles for field validation and password toggle
+  const additionalStyles = {
+    fieldError: {
+      color: '#D32F2F',
+      fontSize: '0.85rem',
+      marginTop: '6px',
+    },
+    inputError: {
+      borderColor: '#D32F2F',
+    },
+    passwordWrapper: {
+      position: 'relative',
+    },
+    passwordToggle: {
+      position: 'absolute',
+      right: '12px',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      color: '#777',
+      fontSize: '1rem',
+      display: 'flex',
+      alignItems: 'center',
+    }
+  };
+
+  // Merge styles
+  const combinedStyles = { ...styles, ...additionalStyles };
+
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    // Username validation
+    if (!formData.username) {
+      errors.username = 'Username is required';
+      isValid = false;
+    } else if (formData.username.length < 3) {
+      errors.username = 'Username must be at least 3 characters long';
+      isValid = false;
+    }
+
+    // Email validation
+    if (!formData.email) {
+      errors.email = 'Email is required';
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+      isValid = false;
+    }
+
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+      isValid = false;
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters long';
+      isValid = false;
+    }
+
+    // Confirm password
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+      isValid = false;
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+      isValid = false;
+    }
+
+    setFieldErrors(errors);
+    return isValid;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Clear error when user starts typing
+    
+    // Clear specific field error
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({...prev, [name]: null}));
+    }
+    
+    // Clear general error when user starts typing
     if (error) setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Simple validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    // Validate form
+    if (!validateForm()) {
       return;
     }
     
@@ -280,11 +362,16 @@ const Register = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                style={styles.formInput}
+                style={{
+                  ...styles.formInput,
+                  ...(fieldErrors.username ? combinedStyles.inputError : {})
+                }}
                 onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
                 onBlur={e => e.target.style.boxShadow = 'none'}
-                required
               />
+              {fieldErrors.username && (
+                <div style={combinedStyles.fieldError}>{fieldErrors.username}</div>
+              )}
             </div>
             
             <div style={styles.formGroup}>
@@ -295,43 +382,68 @@ const Register = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                style={styles.formInput}
+                style={{
+                  ...styles.formInput,
+                  ...(fieldErrors.email ? combinedStyles.inputError : {})
+                }}
                 onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
                 onBlur={e => e.target.style.boxShadow = 'none'}
-                required
               />
+              {fieldErrors.email && (
+                <div style={combinedStyles.fieldError}>{fieldErrors.email}</div>
+              )}
             </div>
             
             <div style={styles.formRow}>
               <div style={styles.formGroup}>
                 <label style={styles.formLabel} htmlFor="password">Password</label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  style={styles.formInput}
-                  onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
-                  onBlur={e => e.target.style.boxShadow = 'none'}
-                  required
-                />
-                <p style={styles.passwordTips}>At least 8 characters</p>
+                <div style={combinedStyles.passwordWrapper}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    style={{
+                      ...styles.formInput,
+                      ...(fieldErrors.password ? combinedStyles.inputError : {})
+                    }}
+                    onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
+                    onBlur={e => e.target.style.boxShadow = 'none'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={combinedStyles.passwordToggle}
+                    tabIndex="-1"
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+                {fieldErrors.password && (
+                  <div style={combinedStyles.fieldError}>{fieldErrors.password}</div>
+                )}
+                <p style={styles.passwordTips}>At least 6 characters</p>
               </div>
               
               <div style={styles.formGroup}>
                 <label style={styles.formLabel} htmlFor="confirmPassword">Confirm Password</label>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   id="confirmPassword"
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  style={styles.formInput}
+                  style={{
+                    ...styles.formInput,
+                    ...(fieldErrors.confirmPassword ? combinedStyles.inputError : {})
+                  }}
                   onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
                   onBlur={e => e.target.style.boxShadow = 'none'}
-                  required
                 />
+                {fieldErrors.confirmPassword && (
+                  <div style={combinedStyles.fieldError}>{fieldErrors.confirmPassword}</div>
+                )}
               </div>
             </div>
             

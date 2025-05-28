@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
@@ -9,13 +9,22 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
   
-  const { login } = useContext(AuthContext);
+  const { login, authError } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   
   // Get redirect path from location state or default to home
   const from = location.state?.from?.pathname || '/';
+
+  // Check for auth errors from context
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
 
   // Modern bakery design styles
   const styles = {
@@ -176,15 +185,81 @@ const Login = () => {
     }
   };
 
+  // Add styles for field validation and password toggle
+  const additionalStyles = {
+    fieldError: {
+      color: '#D32F2F',
+      fontSize: '0.85rem',
+      marginTop: '6px',
+    },
+    inputError: {
+      borderColor: '#D32F2F',
+    },
+    passwordWrapper: {
+      position: 'relative',
+    },
+    passwordToggle: {
+      position: 'absolute',
+      right: '12px',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      color: '#777',
+      fontSize: '1rem',
+      display: 'flex',
+      alignItems: 'center',
+    }
+  };
+
+  // Merge styles
+  const combinedStyles = { ...styles, ...additionalStyles };
+
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    // Email validation
+    if (!formData.email) {
+      errors.email = 'Email is required';
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+      isValid = false;
+    }
+
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+      isValid = false;
+    }
+
+    setFieldErrors(errors);
+    return isValid;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Clear error when user starts typing
+    
+    // Clear specific field error
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({...prev, [name]: null}));
+    }
+    
+    // Clear general error when user starts typing
     if (error) setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+    
     setLoading(true);
     setError(null);
 
@@ -193,7 +268,7 @@ const Login = () => {
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login failed:', err);
-      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
+      // Error is already set in the AuthContext and propagated via authError
     } finally {
       setLoading(false);
     }
@@ -244,26 +319,46 @@ const Login = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                style={styles.formInput}
+                style={{
+                  ...styles.formInput,
+                  ...(fieldErrors.email ? combinedStyles.inputError : {})
+                }}
                 onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
                 onBlur={e => e.target.style.boxShadow = 'none'}
-                required
               />
+              {fieldErrors.email && (
+                <div style={combinedStyles.fieldError}>{fieldErrors.email}</div>
+              )}
             </div>
             
             <div style={styles.formGroup}>
               <label style={styles.formLabel} htmlFor="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                style={styles.formInput}
-                onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
-                onBlur={e => e.target.style.boxShadow = 'none'}
-                required
-              />
+              <div style={combinedStyles.passwordWrapper}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  style={{
+                    ...styles.formInput,
+                    ...(fieldErrors.password ? combinedStyles.inputError : {})
+                  }}
+                  onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
+                  onBlur={e => e.target.style.boxShadow = 'none'}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={combinedStyles.passwordToggle}
+                  tabIndex="-1"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+              {fieldErrors.password && (
+                <div style={combinedStyles.fieldError}>{fieldErrors.password}</div>
+              )}
             </div>
             
             <button 
