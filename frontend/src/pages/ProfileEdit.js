@@ -5,7 +5,7 @@ import { AuthContext } from '../context/AuthContext';
 import { BASE_URL } from '../utils';
 
 const ProfileEdit = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, updateProfile } = useContext(AuthContext);
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -240,7 +240,7 @@ const ProfileEdit = () => {
       }
 
       // Send update request
-      const response = await axios.put(`${BASE_URL}/users/profile`, requestBody);
+      const response = await updateProfile(requestBody);
       
       setSuccessMessage('Profile updated successfully');
       

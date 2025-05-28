@@ -1,0 +1,73 @@
+/* Existing styles */
+
+.userMenu {
+  position: relative;
+  display: inline-block;
+}
+
+.userButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 16px;
+  color: #5A2828;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+
+.userButton:hover {
+  color: #B85C38;
+}
+
+.dropdownMenu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background-color: white;
+  min-width: 180px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  z-index: 1000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dropdownItem {
+  display: block;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: #5A2828;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dropdownItem:hover {
+  background-color: #f9f3f0;
+  color: #B85C38;
+}
+
+.dropdownLogout {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  font-size: 16px;
+  color: #D32F2F;
+  cursor: pointer;
+}
+
+.dropdownLogout:hover {
+  background-color: #fff1f1;
+}
+
+/* Additional styles for cart icon */
+.cartLink {
+  margin-left: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.cartIcon {
+  font-size: 20px;
+}

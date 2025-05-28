@@ -68,6 +68,10 @@ const Header = () => {
               
               {dropdownOpen && (
                 <div className="user-dropdown">
+                  {/* Add profile edit link */}
+                  <Link to="/profile/edit" className="dropdown-item">
+                    Edit Profile
+                  </Link>
                   <button onClick={handleLogout} className="dropdown-item">
                     Logout
                   </button>

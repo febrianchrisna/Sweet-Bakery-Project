@@ -200,6 +200,71 @@ async function logout(req, res) {
   }
 }
 
+// Update user profile
+async function updateProfile(req, res) {
+  try {
+    const userId = req.userId;
+    const { username, currentPassword, newPassword } = req.body;
+
+    // Find the user
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        status: "Error",
+        message: "User not found"
+      });
+    }
+
+    // If user wants to change password
+    if (currentPassword && newPassword) {
+      // Validate current password
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      
+      if (!isPasswordValid) {
+        return res.status(400).json({
+          status: "Error",
+          message: "Current password is incorrect"
+        });
+      }
+      
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 5);
+      
+      // Update user with new password
+      await User.update(
+        { 
+          username: username || user.username,
+          password: hashedNewPassword 
+        },
+        { where: { id: userId } }
+      );
+    } else {
+      // Just update username
+      await User.update(
+        { username: username || user.username },
+        { where: { id: userId } }
+      );
+    }
+    
+    // Get updated user data
+    const updatedUser = await User.findByPk(userId);
+    const { password: _, refresh_token: __, ...safeUserData } = updatedUser.toJSON();
+    
+    return res.status(200).json({
+      status: "Success",
+      message: "Profile updated successfully",
+      data: safeUserData
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      status: "Error",
+      message: error.message || "Failed to update profile"
+    });
+  }
+}
+
 // Delete user (admin only)
 async function deleteUser(req, res) {
   try {
@@ -239,4 +304,4 @@ async function deleteUser(req, res) {
   }
 }
 
-export { login, logout, getUser, register, deleteUser };
+export { login, logout, getUser, register, updateProfile, deleteUser };

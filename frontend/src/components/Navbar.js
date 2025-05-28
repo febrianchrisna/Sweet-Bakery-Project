@@ -1,11 +1,11 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import styles from './Navbar.module.css'; // Adjust the import based on your file structure
+import styles from './Navbar.module.css';
 
 const Navbar = () => {
-  const { isAuthenticated, logout } = useContext(AuthContext);
-  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const { isAuthenticated, user, logout, isAdmin } = useContext(AuthContext);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -18,24 +18,33 @@ const Navbar = () => {
         <Link to="/">Sweet Bakery</Link>
       </div>
       <div className={styles.links}>
+        <Link to="/">Home</Link>
         <Link to="/products">Products</Link>
-        <Link to="/about">About Us</Link>
-        <Link to="/contact">Contact</Link>
+        {isAuthenticated && !isAdmin && (
+          <Link to="/orders">My Orders</Link>
+        )}
+        {isAdmin && (
+          <Link to="/admin">Admin Dashboard</Link>
+        )}
       </div>
       <div className={styles.userSection}>
         {isAuthenticated ? (
           <div className={styles.userMenu}>
-            <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className={styles.userButton}>
-              User Menu
+            <button 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)} 
+              className={styles.userButton}
+            >
+              {user?.username || "User"} ▼
             </button>
-            <div style={isDropdownOpen ? styles.dropdownMenu : styles.dropdownMenuHidden}>
-              <Link to="/orders" style={styles.dropdownItem}>My Orders</Link>
-              
-              {/* Add a new link to the profile edit page */}
-              <Link to="/profile/edit" style={styles.dropdownItem}>Edit Profile</Link>
-              
-              <button onClick={handleLogout} style={styles.dropdownLogout}>Logout</button>
-            </div>
+            {isDropdownOpen && (
+              <div className={styles.dropdownMenu}>
+                {!isAdmin && (
+                  <Link to="/orders" className={styles.dropdownItem}>My Orders</Link>
+                )}
+                <Link to="/profile/edit" className={styles.dropdownItem}>Edit Profile</Link>
+                <button onClick={handleLogout} className={styles.dropdownLogout}>Logout</button>
+              </div>
+            )}
           </div>
         ) : (
           <div className={styles.authLinks}>
@@ -43,6 +52,9 @@ const Navbar = () => {
             <Link to="/register">Register</Link>
           </div>
         )}
+        <Link to="/cart" className={styles.cartLink}>
+          <span className={styles.cartIcon}>🛒</span>
+        </Link>
       </div>
     </nav>
   );
