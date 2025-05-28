@@ -8,14 +8,10 @@ const AdminDashboard = () => {
     totalProducts: 0,
     totalOrders: 0,
     pendingOrders: 0,
-    recentOrders: [],
-    totalUsers: 0,
-    recentUsers: []
+    recentOrders: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
 
   // Modern bakery design styles
   const styles = {
@@ -255,30 +251,6 @@ const AdminDashboard = () => {
       borderRadius: '10px',
       margin: '20px 0',
       fontSize: '1rem',
-    },
-    successMessage: {
-      backgroundColor: 'rgba(76, 175, 80, 0.1)',
-      color: '#388E3C',
-      padding: '15px 20px',
-      borderRadius: '10px',
-      margin: '0 0 20px 0',
-      fontSize: '1rem',
-      borderLeft: '4px solid #388E3C',
-    },
-    deleteButton: {
-      padding: '8px 12px',
-      backgroundColor: 'rgba(244, 67, 54, 0.1)',
-      color: '#D32F2F',
-      border: 'none',
-      borderRadius: '6px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      fontSize: '0.9rem',
-    },
-    disabledButton: {
-      opacity: 0.5,
-      cursor: 'not-allowed',
     }
   };
 
@@ -293,24 +265,16 @@ const AdminDashboard = () => {
         // Get all orders
         const ordersResponse = await axios.get(`${BASE_URL}/orders`);
         
-        // Get all users
-        const usersResponse = await axios.get(`${BASE_URL}/users`);
-        
         // Calculate stats
         const allOrders = ordersResponse.data;
         const pendingOrders = allOrders.filter(order => order.status === 'pending');
-        const recentOrders = allOrders.slice(0, 5);
-        
-        const allUsers = usersResponse.data;
-        const recentUsers = allUsers.slice(-5).reverse(); // Get 5 most recent users
+        const recentOrders = allOrders.slice(0, 5); // Get 5 most recent orders
         
         setStats({
           totalProducts: productsResponse.data.length,
           totalOrders: allOrders.length,
           pendingOrders: pendingOrders.length,
-          recentOrders,
-          totalUsers: allUsers.length,
-          recentUsers
+          recentOrders
         });
         
         setLoading(false);
@@ -323,32 +287,6 @@ const AdminDashboard = () => {
 
     fetchStats();
   }, []);
-
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      setActionLoading(userId);
-      await axios.delete(`${BASE_URL}/users/${userId}`);
-      
-      // Remove user from the list
-      setStats(prevStats => ({
-        ...prevStats,
-        recentUsers: prevStats.recentUsers.filter(user => user.id !== userId),
-        totalUsers: prevStats.totalUsers - 1
-      }));
-      
-      setSuccessMessage('User deleted successfully');
-      setTimeout(() => setSuccessMessage(null), 3000);
-      setActionLoading(null);
-    } catch (err) {
-      console.error('Error deleting user:', err);
-      setError(err.response?.data?.message || 'Failed to delete user. Please try again.');
-      setActionLoading(null);
-    }
-  };
 
   // Helper function to format date
   const formatDate = (dateString) => {
@@ -377,8 +315,6 @@ const AdminDashboard = () => {
       {loading && <div style={styles.loadingContainer}>Loading dashboard data...</div>}
       
       {error && <div style={styles.errorContainer}>{error}</div>}
-      
-      {successMessage && <div style={styles.successMessage}>{successMessage}</div>}
       
       {!loading && !error && (
         <>
@@ -575,87 +511,6 @@ const AdminDashboard = () => {
                             >
                               View Details
                             </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* User Management Section */}
-          <div style={{...styles.recentActivitySection, marginTop: '30px'}}>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>User Management ({stats.totalUsers} total)</h2>
-            </div>
-            
-            <div style={styles.sectionContent}>
-              {stats.recentUsers.length === 0 ? (
-                <div style={styles.noOrders}>No users yet.</div>
-              ) : (
-                <div style={styles.tableContainer}>
-                  <table style={styles.table}>
-                    <thead style={styles.tableHeader}>
-                      <tr>
-                        <th style={styles.tableHeaderCell}>User ID</th>
-                        <th style={styles.tableHeaderCell}>Username</th>
-                        <th style={styles.tableHeaderCell}>Email</th>
-                        <th style={styles.tableHeaderCell}>Role</th>
-                        <th style={{...styles.tableHeaderCell, width: '150px'}}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats.recentUsers.map(user => (
-                        <tr 
-                          key={user.id} 
-                          style={styles.tableRow}
-                          onMouseOver={e => {
-                            e.currentTarget.style.backgroundColor = styles.tableRowHover.backgroundColor;
-                          }}
-                          onMouseOut={e => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }}
-                        >
-                          <td style={{...styles.tableCell, ...styles.tableCellOrder}}>#{user.id}</td>
-                          <td style={styles.tableCell}>{user.username}</td>
-                          <td style={styles.tableCell}>{user.email}</td>
-                          <td style={styles.tableCell}>
-                            <span style={{
-                              ...styles.statusBadge, 
-                              ...(user.role === 'admin' ? styles.statusCompleted : styles.statusPending)
-                            }}>
-                              {user.role}
-                            </span>
-                          </td>
-                          <td style={styles.tableCell}>
-                            <button 
-                              onClick={() => handleDeleteUser(user.id)}
-                              disabled={actionLoading === user.id || user.role === 'admin'}
-                              style={{
-                                ...styles.deleteButton,
-                                ...(actionLoading === user.id ? styles.disabledButton : {}),
-                                ...(user.role === 'admin' ? { 
-                                  backgroundColor: '#ccc', 
-                                  color: '#999',
-                                  cursor: 'not-allowed'
-                                } : {})
-                              }}
-                              onMouseOver={e => {
-                                if (actionLoading !== user.id && user.role !== 'admin') {
-                                  e.target.style.backgroundColor = 'rgba(244, 67, 54, 0.2)';
-                                }
-                              }}
-                              onMouseOut={e => {
-                                if (actionLoading !== user.id && user.role !== 'admin') {
-                                  e.target.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
-                                }
-                              }}
-                              title={user.role === 'admin' ? 'Cannot delete admin users' : 'Delete user'}
-                            >
-                              {actionLoading === user.id ? 'Deleting...' : 'Delete'}
-                            </button>
                           </td>
                         </tr>
                       ))}

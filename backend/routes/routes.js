@@ -19,13 +19,9 @@ router.post("/register", register);
 router.get("/logout", verifyToken, logout);
 router.get("/token", refreshToken);
 
-// ==================== PROFILE ROUTES (untuk user yang login) ====================
-router.put("/profile", verifyToken, updateProfile);
-
 // ==================== ADMIN ROUTES (khusus admin) ====================
 // User management (admin only)
 router.get("/users", verifyToken, isAdmin, getUser);
-router.delete("/users/:id", verifyToken, isAdmin, deleteUser);
 
 // Product management (admin only)
 router.get("/products", getProducts);

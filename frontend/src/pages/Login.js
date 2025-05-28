@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
@@ -9,7 +9,6 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
   
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -17,15 +16,6 @@ const Login = () => {
   
   // Get redirect path from location state or default to home
   const from = location.state?.from?.pathname || '/';
-
-  useEffect(() => {
-    // Check for success message from registration
-    if (location.state?.message) {
-      setSuccessMessage(location.state.message);
-      // Clear the message from location state
-      navigate(location.pathname, { replace: true });
-    }
-  }, [location.state, navigate, location.pathname]);
 
   // Modern bakery design styles
   const styles = {
@@ -195,58 +185,28 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Client-side validation
-    if (!formData.email.trim()) {
-      setError('Email is required');
-      return;
-    }
-    
-    if (!formData.password.trim()) {
-      setError('Password is required');
-      return;
-    }
-    
-    if (!formData.email.includes('@')) {
-      setError('Please enter a valid email address');
-      return;
-    }
-    
     setLoading(true);
     setError(null);
 
     try {
-      const success = await login(formData.email, formData.password);
-      if (success) {
-        navigate(from, { replace: true });
-      }
+      await login(formData.email, formData.password);
+      navigate(from, { replace: true });
     } catch (err) {
       console.error('Login failed:', err);
-      
-      // More specific error messages
-      const errorMessage = err.response?.data?.message;
-      if (errorMessage?.includes('incorrect') || errorMessage?.includes('invalid')) {
-        setError('Invalid email or password. Please check your credentials and try again.');
-      } else if (errorMessage?.includes('not found')) {
-        setError('No account found with this email address. Please register first.');
-      } else {
-        setError(errorMessage || 'Login failed. Please try again.');
-      }
+      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Add success message style
-  const successMessageStyle = {
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    color: '#388E3C',
-    padding: '10px 15px',
-    borderRadius: '8px',
-    marginBottom: '20px',
-    fontSize: '0.95rem',
-    borderLeft: '4px solid #388E3C',
-  };
+  // Dynamically create keyframes for spinner animation
+  const spinnerAnimation = document.createElement('style');
+  spinnerAnimation.innerHTML = `
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(spinnerAnimation);
 
   return (
     <div style={styles.pageContainer}>
@@ -269,12 +229,6 @@ const Login = () => {
         </div>
         
         <div style={styles.cardBody}>
-          {successMessage && (
-            <div style={successMessageStyle}>
-              {successMessage}
-            </div>
-          )}
-          
           {error && (
             <div style={styles.errorContainer}>
               {error}

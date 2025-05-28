@@ -61,68 +61,12 @@ export const AuthProvider = ({ children }) => {
     axios.defaults.withCredentials = true;
   }, []);
 
-  // Register function
-  const register = async (email, username, password) => {
-    try {
-      setAuthError('');
-      
-      // Client-side validation
-      if (!email || !username || !password) {
-        setAuthError('All fields are required');
-        return false;
-      }
-      
-      if (password.length < 6) {
-        setAuthError('Password must be at least 6 characters long');
-        return false;
-      }
-      
-      if (!email.includes('@')) {
-        setAuthError('Please enter a valid email address');
-        return false;
-      }
-      
-      const response = await axios.post(
-        `${BASE_URL}/register`, 
-        { email, username, password },
-        { withCredentials: false }
-      );
-
-      if (response.status === 201) {
-        return true;
-      }
-    } catch (error) {
-      console.error('Registration failed:', error);
-      
-      // More specific error messages
-      const errorMessage = error.response?.data?.message;
-      if (errorMessage?.includes('already registered') || errorMessage?.includes('already exists')) {
-        setAuthError('An account with this email already exists. Please use a different email or try logging in.');
-      } else if (errorMessage?.includes('validation')) {
-        setAuthError('Please check your input and try again.');
-      } else {
-        setAuthError(errorMessage || 'Registration failed. Please try again.');
-      }
-      return false;
-    }
-  };
-
-  // Login function with better error handling
+  // Login function
   const login = async (email, password) => {
     try {
       setAuthError('');
       
-      // Client-side validation
-      if (!email || !password) {
-        setAuthError('Email and password are required');
-        throw new Error('Email and password are required');
-      }
-      
-      if (!email.includes('@')) {
-        setAuthError('Please enter a valid email address');
-        throw new Error('Please enter a valid email address');
-      }
-      
+      // Make sure withCredentials is true to receive cookies
       const response = await axios.post(
         `${BASE_URL}/login`,
         { email, password },
@@ -148,20 +92,34 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Login failed:', error);
-      
-      // More specific error messages
-      const errorMessage = error.response?.data?.message;
-      if (errorMessage?.includes('incorrect') || errorMessage?.includes('invalid')) {
-        setAuthError('Invalid email or password. Please check your credentials and try again.');
-      } else if (errorMessage?.includes('not found')) {
-        setAuthError('No account found with this email address. Please register first.');
-      } else if (error.code === 'NETWORK_ERROR') {
-        setAuthError('Network error. Please check your internet connection and try again.');
-      } else {
-        setAuthError(errorMessage || 'Login failed. Please check your credentials and try again.');
+      setAuthError(
+        error.response?.data?.message || 
+        'Login failed. Please check your credentials and try again.'
+      );
+      return false;
+    }
+  };
+
+  // Register function
+  const register = async (email, username, password) => {
+    try {
+      setAuthError('');
+      const response = await axios.post(
+        `${BASE_URL}/register`, 
+        { email, username, password },
+        { withCredentials: false }
+      );
+
+      if (response.status === 201) {
+        return true;
       }
-      
-      throw error; // Re-throw to be caught by the calling component
+    } catch (error) {
+      console.error('Registration failed:', error);
+      setAuthError(
+        error.response?.data?.message || 
+        'Registration failed. Please try again.'
+      );
+      return false;
     }
   };
 
