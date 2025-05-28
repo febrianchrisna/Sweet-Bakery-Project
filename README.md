@@ -30,7 +30,7 @@ Proyek Sweet Bakery adalah aplikasi web full-stack untuk manajemen toko roti onl
 
 ### Base URL
 ```
-Development: http://localhost:5000
+Development: https://frontend-bakery-dot-g-09-450802.uc.r.appspot.com
 Production: https://bakery-be-663618957788.us-central1.run.app
 ```
 
