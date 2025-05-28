@@ -46,8 +46,6 @@ Production: https://bakery-be-663618957788.us-central1.run.app
 | GET | `/token` | Refresh Token | Memperbarui access token menggunakan refresh token |
 | GET | `/users` | Admin | Mendapatkan daftar semua pengguna |
 
-
-
 ---
 
 ## 🍞 Endpoint Produk
@@ -65,22 +63,6 @@ Production: https://bakery-be-663618957788.us-central1.run.app
 - `category`: Filter berdasarkan kategori (Bread, Cake, Pastry, Cookies, Dessert)
 - `featured`: Filter produk unggulan (true/false)
 - `search`: Pencarian berdasarkan nama produk
-
-### Contoh Request
-
-**POST /products**
-```json
-{
-  "name": "Chocolate Croissant",
-  "description": "Croissant mentega dengan isian cokelat",
-  "price": 15000,
-  "category": "Pastry",
-  "featured": true,
-  "stock": 20,
-  "image": "chocolate-croissant.jpg"
-}
-```
-
 ---
 
 ## 📦 Endpoint Pesanan
@@ -101,90 +83,6 @@ Production: https://bakery-be-663618957788.us-central1.run.app
 - `processing`: Pesanan sedang diproses
 - `completed`: Pesanan selesai
 - `cancelled`: Pesanan dibatalkan
-
-### Contoh Request
-
-**POST /orders**
-```json
-{
-  "items": [
-    {"productId": 1, "quantity": 2},
-    {"productId": 3, "quantity": 1}
-  ],
-  "shipping_address": "Jl. Contoh No. 123, Jakarta",
-  "payment_method": "Cash on Delivery"
-}
-```
-
-**PUT /orders/:id/status**
-```json
-{
-  "status": "processing"
-}
-```
-
----
-
-## 🛡️ Middleware Autentikasi
-
-### Bearer Token
-Semua endpoint yang memerlukan autentikasi harus menyertakan header:
-```
-Authorization: Bearer <access_token>
-```
-
-### Role-based Access
-- **Admin**: Akses penuh ke semua endpoint
-- **Customer**: Akses terbatas ke data milik sendiri
-- **Public**: Akses ke produk dan kategori saja
-
----
-
-## 📊 Response Format
-
-### Success Response
-```json
-{
-  "status": "Success",
-  "message": "Operasi berhasil",
-  "data": {
-    // data response
-  }
-}
-```
-
-### Error Response
-```json
-{
-  "status": "Error",
-  "message": "Pesan error yang deskriptif"
-}
-```
-
-### HTTP Status Codes
-- `200`: OK - Request berhasil
-- `201`: Created - Resource baru berhasil dibuat
-- `400`: Bad Request - Request tidak valid
-- `401`: Unauthorized - Token tidak valid atau tidak ada
-- `403`: Forbidden - Tidak memiliki akses
-- `404`: Not Found - Resource tidak ditemukan
-- `500`: Internal Server Error - Error server
-
----
-
-## 🔧 Health Check
-
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| GET | `/health` | Mengecek status server |
-
-Response:
-```json
-{
-  "status": "ok",
-  "message": "Server is running"
-}
-```
 
 ---
 
@@ -233,7 +131,3 @@ Response:
 - Role-based access control
 
 ---
-
-## 🤝 Kontribusi
-
-Proyek ini dikembangkan sebagai tugas praktikum TCC. Untuk kontribusi atau pertanyaan, silakan hubungi tim pengembang.
