@@ -45,7 +45,8 @@ Production: https://bakery-be-663618957788.us-central1.run.app
 | GET | `/logout` | Bearer Token | Keluar dari sistem dan menghapus refresh token |
 | GET | `/token` | Refresh Token | Memperbarui access token menggunakan refresh token |
 | GET | `/users` | Admin | Mendapatkan daftar semua pengguna |
-
+| PUT | `/users/profile` | User/Admin | Mengupdate Profil Pengguna |
+| DELETE | `/users/:id` | Admin | Menghapus pengguna berdasarkan id |
 ---
 
 ## 🍞 Endpoint Produk
