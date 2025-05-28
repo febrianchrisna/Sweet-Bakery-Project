@@ -242,15 +242,21 @@ const ProfileEdit = () => {
       // Send update request
       const response = await updateProfile(requestBody);
       
+      // Tampilkan pesan sukses
       setSuccessMessage('Profile updated successfully');
       
-      // Jika ada perubahan password, tunggu 2 detik lalu arahkan ke halaman login
-      // Jika hanya perubahan username, tidak perlu logout
+      // Reset form jika mengubah password
       if (passwordChangeMode) {
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+        setPasswordChangeMode(false);
+        setFormData({
+          ...formData,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
       }
+      
+      // Tidak perlu redirect ke halaman login, biarkan user tetap di halaman ini
     } catch (err) {
       console.error('Profile update failed:', err);
       setError(
