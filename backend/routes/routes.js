@@ -39,6 +39,14 @@ router.get("/orders", verifyToken, isAdmin, getAllOrders);
 router.put("/orders/:id/status", verifyToken, isAdmin, updateOrderStatus);
 router.delete("/orders/:id", verifyToken, isAdmin, deleteUserOrder); // Admin hapus pesanan
 
+// Admin check endpoint - simple endpoint that returns 200 if the user is an admin
+router.get("/check-admin", verifyToken, isAdmin, (req, res) => {
+  res.status(200).json({
+    status: "Success",
+    message: "You have admin privileges"
+  });
+});
+
 // ==================== USER ROUTES (khusus user) ====================
 // Product browsing (user & public)
 router.get("/products/categories", getCategories);

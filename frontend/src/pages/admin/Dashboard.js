@@ -295,10 +295,17 @@ const AdminDashboard = () => {
       try {
         setLoading(true);
         
-        // Get products count
-        const productsResponse = await axios.get(`${BASE_URL}/products`);
+        // Get products count - check auth first
+        try {
+          // Simple auth check to ensure we're still logged in as admin
+          await axios.get(`${BASE_URL}/check-admin`);
+        } catch (authError) {
+          // If auth check fails, we won't try to load the other data
+          throw authError;
+        }
         
-        // Get all orders
+        // Now fetch the actual data
+        const productsResponse = await axios.get(`${BASE_URL}/products`);
         const ordersResponse = await axios.get(`${BASE_URL}/orders`);
         
         // Calculate stats
@@ -317,24 +324,24 @@ const AdminDashboard = () => {
       } catch (err) {
         console.error('Error fetching admin stats:', err);
         
-        // Handle authentication errors
-        if (err.response?.status === 401) {
-          setError('Your session has expired. Please log in again.');
-          // Log out user and redirect to login
-          setTimeout(() => {
-            logout();
-            navigate('/login');
-          }, 3000);
-        } else {
-          setError('Failed to load dashboard data. Please try again later.');
-        }
-        
+        // Show a more generic error message first
+        setError('Failed to load dashboard data. Please try again later.');
         setLoading(false);
+        
+        // Don't auto-logout on error - let the user try again
+        // Only log out if it's a specific auth error that we can't recover from
+        if (err.response?.status === 403) {
+          // This is specifically a permission denied (not just expired token)
+          setError('You don\'t have admin permissions to view this page.');
+        }
       }
     };
 
-    fetchStats();
-  }, [logout, navigate]);
+    // Only fetch data if we have a user and they're an admin
+    if (currentUser && currentUser.role === 'admin') {
+      fetchStats();
+    }
+  }, [currentUser]);
 
   // Add function to fetch users
   useEffect(() => {

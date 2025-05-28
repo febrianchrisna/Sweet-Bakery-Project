@@ -5,21 +5,17 @@ import { AuthContext } from "../context/AuthContext";
 function AdminRoute({ children }) {
   const { isAuthenticated, isAdmin, loading } = useContext(AuthContext);
 
-  // Show loading spinner while checking authentication
+  // Don't redirect while still checking authentication
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return <div>Loading...</div>;
   }
 
-  // Redirect to login if not authenticated or to home if not admin
-  if (!isAuthenticated) {
+  // Redirect if not authenticated or not an admin
+  if (!isAuthenticated || !isAdmin) {
     return <Navigate to="/login" />;
   }
-  
-  if (!isAdmin) {
-    return <Navigate to="/" />;
-  }
 
-  // If user is authenticated and admin, render the protected component
+  // Render children if user is an admin
   return children;
 }
 

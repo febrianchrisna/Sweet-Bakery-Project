@@ -26,8 +26,10 @@ export const setupAxiosInterceptors = () => {
     async (error) => {
       const originalRequest = error.config;
       
-      // If error is 401 Unauthorized and not a retry
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      // If error is 401 Unauthorized and not a retry and not a login request
+      if (error.response?.status === 401 && 
+          !originalRequest._retry && 
+          !originalRequest.url?.includes('/login')) {
         originalRequest._retry = true;
         
         try {
@@ -52,24 +54,12 @@ export const setupAxiosInterceptors = () => {
             }
           }
           
-          // If refresh failed, log user out
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('auth_user');
-          
-          // Redirect to login page
-          window.location.href = '/login';
-          
+          // Don't automatically log out or redirect here
+          // Just let the component handle the error
+          console.warn('Token refresh failed, component will handle redirect if needed');
         } catch (refreshError) {
           console.error('Token refresh failed:', refreshError);
-          
-          // Clear authentication data
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('auth_user');
-          
-          // Redirect to login page
-          window.location.href = '/login';
+          // Don't automatically log out or redirect here
         }
       }
       
