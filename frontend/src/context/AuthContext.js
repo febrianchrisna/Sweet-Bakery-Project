@@ -127,15 +127,18 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (userData) => {
     try {
       setAuthError('');
-      // Pastikan URL menggunakan BASE_URL yang benar + endpoint yang benar
-      const response = await axios.put(`${BASE_URL}/users/profile`, userData);
+      // Pastikan menggunakan endpoint yang benar
+      const response = await axios.put(`${BASE_URL}/user/profile`, userData);
       
       // If username was updated, update the local user data
-      if (userData.username && user && userData.username !== user.username) {
+      if (userData.username && userData.username !== user.username) {
         const updatedUser = {...user, username: userData.username};
         setUser(updatedUser);
         localStorage.setItem('auth_user', JSON.stringify(updatedUser));
       }
+      
+      // Jangan logout otomatis saat password diubah
+      // Hapus kode yang menyebabkan logout otomatis
       
       return response.data;
     } catch (error) {

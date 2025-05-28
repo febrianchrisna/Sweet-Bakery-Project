@@ -36,8 +36,8 @@ router.put("/orders/:id/status", verifyToken, isAdmin, updateOrderStatus);
 router.delete("/orders/:id", verifyToken, isAdmin, deleteUserOrder); // Admin hapus pesanan
 
 // ==================== USER ROUTES (khusus user) ====================
-// User profile management - accessible by any authenticated user
-router.put("/users/profile", verifyToken, updateProfile);
+// User profile management - fix endpoint to match frontend
+router.put("/user/profile", verifyToken, updateProfile); // Changed from "/users/profile"
 
 // Product browsing (user & public)
 router.get("/products/categories", getCategories);

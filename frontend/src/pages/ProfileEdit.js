@@ -244,14 +244,13 @@ const ProfileEdit = () => {
       
       setSuccessMessage('Profile updated successfully');
       
-      // If we changed username, wait a bit and then logout to refresh user data
-      if (formData.username !== user.username || passwordChangeMode) {
+      // Jika ada perubahan password, tunggu 2 detik lalu arahkan ke halaman login
+      // Jika hanya perubahan username, tidak perlu logout
+      if (passwordChangeMode) {
         setTimeout(() => {
-          logout();
           navigate('/login');
         }, 2000);
       }
-      
     } catch (err) {
       console.error('Profile update failed:', err);
       setError(
