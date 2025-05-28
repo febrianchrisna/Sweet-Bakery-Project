@@ -111,13 +111,25 @@ async function login(req, res) {
             }
           );
   
-          // Remove cookie setting and include refreshToken in response body instead
+          // Set both tokens as HttpOnly cookies
+          res.cookie("access_token", accessToken, {
+            httpOnly: true,
+            sameSite: "none",
+            maxAge: 30 * 60 * 1000, // 30 minutes
+            secure: true,
+          });
+
+          res.cookie("refresh_token", refreshToken, {
+            httpOnly: true,
+            sameSite: "none",
+            maxAge: 24 * 60 * 60 * 1000, // 1 day
+            secure: true,
+          });
+  
           res.status(200).json({
             status: "Success",
             message: "Login Successful",
             safeUserData,
-            accessToken,
-            refreshToken  // Include refresh token in response
           });
         } else {
           const error = new Error("Password or email incorrect");
@@ -153,6 +165,10 @@ async function logout(req, res) {
         }
       );
     }
+    
+    // Clear cookies
+    res.clearCookie("access_token");
+    res.clearCookie("refresh_token");
     
     res.status(200).json({
       status: "Success",

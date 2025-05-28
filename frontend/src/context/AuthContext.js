@@ -63,22 +63,14 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post(
         `${BASE_URL}/login`,
         { email, password },
-        { withCredentials: false }
+        { withCredentials: true }  // Important: enable cookies
       );
 
-      if (response.data.accessToken) {
-        // Store both tokens and user info in localStorage
-        localStorage.setItem('auth_token', response.data.accessToken);
-        
-        // Store refresh token as well now that backend returns it directly
-        if (response.data.refreshToken) {
-          localStorage.setItem('refresh_token', response.data.refreshToken);
-        }
-        
+      if (response.data.status === "Success") {
+        // Store user info in localStorage but not tokens
         localStorage.setItem('auth_user', JSON.stringify(response.data.safeUserData));
         
         // Update state
-        setToken(response.data.accessToken);
         setUser(response.data.safeUserData);
         setIsAuthenticated(true);
         setIsAdmin(response.data.safeUserData.role === 'admin');
@@ -118,36 +110,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Configure axios globally to include credentials
+  useEffect(() => {
+    axios.defaults.withCredentials = true;
+  }, []);
+
   // Logout function
   const logout = async () => {
     try {
-      // Attempt to notify the backend
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        try {
-          await axios.get(`${BASE_URL}/logout`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-        } catch (err) {
-          console.log('Backend logout failed, continuing with client logout');
-        }
-      }
+      await axios.get(`${BASE_URL}/logout`, { 
+        withCredentials: true 
+      });
       
       // Clear auth state
-      setToken(null);
       setUser(null);
       setIsAuthenticated(false);
       setIsAdmin(false);
       
-      // Remove from localStorage
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
+      // Remove user data from localStorage
       localStorage.removeItem('auth_user');
       
-      // Clear Authorization header
-      delete axios.defaults.headers.common['Authorization'];
     } catch (error) {
       console.error('Logout failed:', error);
     }
