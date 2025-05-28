@@ -75,7 +75,6 @@ Production: https://bakery-be-663618957788.us-central1.run.app
 | GET | `/orders/:id` | User/Admin | Mendapatkan detail pesanan berdasarkan ID |
 | POST | `/orders` | User | Membuat pesanan baru |
 | PUT | `/orders/:id/status` | Admin | Mengupdate status pesanan (admin) |
-| PUT | `/user/orders/:id/cancel` | User | Membatalkan pesanan (status pending saja) |
 | PUT | `/user/orders/:id` | User/Admin | Mengupdate detail pesanan |
 | DELETE | `/user/orders/:id` | User/Admin | Menghapus pesanan |
 
