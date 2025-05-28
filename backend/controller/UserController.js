@@ -200,7 +200,7 @@ async function logout(req, res) {
   }
 }
 
-// Update user profile
+// Update user profile - accessible for all authenticated users (admin & customer)
 async function updateProfile(req, res) {
   try {
     const userId = req.userId;
