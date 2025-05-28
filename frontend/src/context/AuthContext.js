@@ -67,8 +67,14 @@ export const AuthProvider = ({ children }) => {
       );
 
       if (response.data.accessToken) {
-        // Store token and user info in localStorage
+        // Store both tokens and user info in localStorage
         localStorage.setItem('auth_token', response.data.accessToken);
+        
+        // Store refresh token as well now that backend returns it directly
+        if (response.data.refreshToken) {
+          localStorage.setItem('refresh_token', response.data.refreshToken);
+        }
+        
         localStorage.setItem('auth_user', JSON.stringify(response.data.safeUserData));
         
         // Update state
@@ -115,6 +121,20 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = async () => {
     try {
+      // Attempt to notify the backend
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        try {
+          await axios.get(`${BASE_URL}/logout`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+        } catch (err) {
+          console.log('Backend logout failed, continuing with client logout');
+        }
+      }
+      
       // Clear auth state
       setToken(null);
       setUser(null);
@@ -123,6 +143,7 @@ export const AuthProvider = ({ children }) => {
       
       // Remove from localStorage
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
       localStorage.removeItem('auth_user');
       
       // Clear Authorization header

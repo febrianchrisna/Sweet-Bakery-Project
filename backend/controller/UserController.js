@@ -111,18 +111,13 @@ async function login(req, res) {
             }
           );
   
-          res.cookie("refreshToken", refreshToken, {
-            httpOnly: false,
-            sameSite: "none",
-            maxAge: 24 * 60 * 60 * 1000,
-            secure: true,
-          });
-  
+          // Remove cookie setting and include refreshToken in response body instead
           res.status(200).json({
             status: "Success",
             message: "Login Successful",
             safeUserData,
             accessToken,
+            refreshToken  // Include refresh token in response
           });
         } else {
           const error = new Error("Password or email incorrect");
@@ -143,31 +138,33 @@ async function login(req, res) {
 }
   
 async function logout(req, res) {
-  const refreshToken = req.cookies.refreshToken;
-
-  if (!refreshToken) return res.sendStatus(204);
-
-  const user = await User.findOne({
-    where: {
-      refresh_token: refreshToken,
-    },
-  });
-
-  if (!user) return res.sendStatus(204);
-
-  const userId = user.id;
-
-  await User.update(
-    { refresh_token: null },
-    {
-      where: {
-        id: userId,
-      },
+  try {
+    // Get user ID from authenticated request
+    const userId = req.userId;
+    
+    // Update user to clear refresh token
+    if (userId) {
+      await User.update(
+        { refresh_token: null },
+        {
+          where: {
+            id: userId,
+          },
+        }
+      );
     }
-  );
-
-  res.clearCookie("refreshToken");
-  return res.sendStatus(200);
+    
+    res.status(200).json({
+      status: "Success",
+      message: "Logout successful"
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      status: "Error",
+      message: "Logout failed"
+    });
+  }
 }
 
 export { login, logout, getUser, register };
