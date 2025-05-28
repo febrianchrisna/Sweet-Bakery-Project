@@ -65,8 +65,6 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setAuthError('');
-      
-      // Make sure withCredentials is true to receive cookies
       const response = await axios.post(
         `${BASE_URL}/login`,
         { email, password },
@@ -74,14 +72,8 @@ export const AuthProvider = ({ children }) => {
       );
 
       if (response.data.status === "Success") {
-        // Store user data in localStorage
+        // Store user info in localStorage but not tokens
         localStorage.setItem('auth_user', JSON.stringify(response.data.safeUserData));
-        
-        // For fallback, store tokens in case cookies don't work
-        if (response.data.accessToken) {
-          localStorage.setItem('auth_token', response.data.accessToken);
-          setToken(response.data.accessToken);
-        }
         
         // Update state
         setUser(response.data.safeUserData);
@@ -89,13 +81,34 @@ export const AuthProvider = ({ children }) => {
         setIsAdmin(response.data.safeUserData.role === 'admin');
         
         return true;
+      } else {
+        // Handle unexpected response format
+        setAuthError('Login failed. Unexpected response from server.');
+        return false;
       }
     } catch (error) {
       console.error('Login failed:', error);
-      setAuthError(
-        error.response?.data?.message || 
-        'Login failed. Please check your credentials and try again.'
-      );
+      
+      // Improved error message handling
+      if (error.response) {
+        // The server responded with a status code outside the 2xx range
+        if (error.response.status === 400) {
+          // This is likely an invalid credentials error
+          setAuthError(error.response.data.message || 'Invalid email or password');
+        } else if (error.response.status === 429) {
+          // Rate limiting
+          setAuthError('Too many login attempts. Please try again later.');
+        } else {
+          setAuthError(error.response.data.message || 'An error occurred during login');
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        setAuthError('No response from server. Please check your internet connection.');
+      } else {
+        // Something happened in setting up the request
+        setAuthError('Error setting up request. Please try again.');
+      }
+      
       return false;
     }
   };

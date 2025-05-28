@@ -10,16 +10,19 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login, authError } = useContext(AuthContext);
   const navigate = useNavigate();
+  
+  // Update local error message when context error changes
+  useEffect(() => {
+    if (authError) {
+      setErrorMessage(authError);
+      setIsLoading(false);
+    }
+  }, [authError]);
 
   // Clear error when inputs change
   useEffect(() => {
     if (errorMessage) setErrorMessage('');
   }, [email, password]);
-
-  // Show auth errors from context
-  useEffect(() => {
-    if (authError) setErrorMessage(authError);
-  }, [authError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,12 +47,16 @@ const Login = () => {
       if (success) {
         navigate('/');
       } else {
-        // AuthContext already sets the error
+        // If login wasn't successful but no error was set in context
+        // (this shouldn't normally happen due to our error handling)
+        if (!authError) {
+          setErrorMessage('Login failed. Please try again.');
+        }
         setIsLoading(false);
       }
     } catch (error) {
       console.error('Login error:', error);
-      setErrorMessage(error.response?.data?.message || 'An unexpected error occurred');
+      setErrorMessage('An unexpected error occurred');
       setIsLoading(false);
     }
   };
@@ -59,9 +66,19 @@ const Login = () => {
       <div className="login-form-container">
         <h2>Login to Your Account</h2>
         
+        {/* Display error message with enhanced styling */}
         {errorMessage && (
-          <div className="error-message">
-            <i className="fas fa-exclamation-circle"></i>
+          <div className="error-message" style={{
+            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+            color: '#D32F2F',
+            padding: '15px',
+            borderRadius: '5px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '0.9rem'
+          }}>
+            <i style={{ marginRight: '10px' }} className="fas fa-exclamation-circle"></i>
             {errorMessage}
           </div>
         )}

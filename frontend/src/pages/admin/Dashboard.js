@@ -408,34 +408,6 @@ const AdminDashboard = () => {
       
       {!loading && !error && (
         <>
-          {/* Admin Navigation Menu - Remove Users link */}
-          <div style={styles.adminNav}>
-            <h3 style={styles.navTitle}>Admin Menu</h3>
-            <div style={styles.navLinks}>
-              <Link 
-                to="/admin" 
-                style={styles.navLink}
-                className={window.location.pathname === '/admin' ? 'active' : ''}
-              >
-                Dashboard
-              </Link>
-              <Link 
-                to="/admin/products" 
-                style={styles.navLink}
-                className={window.location.pathname === '/admin/products' ? 'active' : ''}
-              >
-                Products
-              </Link>
-              <Link 
-                to="/admin/orders" 
-                style={styles.navLink}
-                className={window.location.pathname === '/admin/orders' ? 'active' : ''}
-              >
-                Orders
-              </Link>
-            </div>
-          </div>
-          
           <div style={styles.statsContainer}>
             {/* Products Card */}
             <div 
@@ -639,15 +611,32 @@ const AdminDashboard = () => {
             </div>
           </div>
           
-          {/* User Management Section - Added below Recent Orders */}
-          <div style={styles.recentActivitySection}>
+          {/* User Management Section - Added proper margin to avoid overlap */}
+          <div style={{...styles.recentActivitySection, marginTop: '40px'}}>
             <div style={styles.sectionHeader}>
               <h2 style={styles.sectionTitle}>User Management</h2>
             </div>
             
             <div style={styles.sectionContent}>
-              {successMessage && <div style={styles.successMessage}>{successMessage}</div>}
-              {userError && <div style={styles.errorMessage}>{userError}</div>}
+              {successMessage && <div style={{
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                color: '#388E3C',
+                padding: '15px 20px',
+                borderRadius: '8px',
+                margin: '20px',
+                fontSize: '0.95rem',
+                borderLeft: '4px solid #388E3C',
+              }}>{successMessage}</div>}
+              
+              {userError && <div style={{
+                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                color: '#D32F2F',
+                padding: '15px 20px',
+                borderRadius: '8px',
+                margin: '20px',
+                fontSize: '0.95rem',
+                borderLeft: '4px solid #D32F2F',
+              }}>{userError}</div>}
               
               {usersLoading ? (
                 <div style={styles.loadingContainer}>Loading users...</div>
@@ -733,29 +722,6 @@ const AdminDashboard = () => {
       )}
     </div>
   );
-};
-
-// Add these styles to the styles object
-const additionalStyles = {
-  // User management specific styles
-  successMessage: {
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    color: '#388E3C',
-    padding: '15px 20px',
-    borderRadius: '8px',
-    margin: '20px',
-    fontSize: '0.95rem',
-    borderLeft: '4px solid #388E3C',
-  },
-  errorMessage: {
-    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-    color: '#D32F2F',
-    padding: '15px 20px',
-    borderRadius: '8px',
-    margin: '20px',
-    fontSize: '0.95rem',
-    borderLeft: '4px solid #D32F2F',
-  },
 };
 
 export default AdminDashboard;
