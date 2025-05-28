@@ -200,19 +200,18 @@ async function logout(req, res) {
   }
 }
 
-// Update user profile (username and password)
+// Update user profile
 async function updateProfile(req, res) {
   try {
-    const userId = req.userId; // From the token
-    const { username, password, currentPassword } = req.body;
+    const userId = req.userId;
+    const { username, currentPassword, newPassword } = req.body;
     
     // Find the user
     const user = await User.findByPk(userId);
-    
     if (!user) {
-      return res.status(404).json({
-        status: "Error",
-        message: "User not found"
+      return res.status(404).json({ 
+        status: "Error", 
+        message: "User not found" 
       });
     }
     
@@ -220,61 +219,59 @@ async function updateProfile(req, res) {
     const updateData = {};
     
     // Update username if provided
-    if (username) {
-      updateData.username = username;
+    if (username && username.trim()) {
+      updateData.username = username.trim();
     }
     
-    // Update password if provided (requires current password verification)
-    if (password) {
-      // Verify current password if changing password
+    // Update password if provided
+    if (newPassword) {
       if (!currentPassword) {
-        return res.status(400).json({
-          status: "Error",
-          message: "Current password is required to change password"
+        return res.status(400).json({ 
+          status: "Error", 
+          message: "Current password is required to change password" 
         });
       }
       
       // Verify current password
-      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-      if (!isPasswordValid) {
-        return res.status(400).json({
-          status: "Error",
-          message: "Current password is incorrect"
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ 
+          status: "Error", 
+          message: "Current password is incorrect" 
+        });
+      }
+      
+      // Validate new password
+      if (newPassword.length < 6) {
+        return res.status(400).json({ 
+          status: "Error", 
+          message: "New password must be at least 6 characters long" 
         });
       }
       
       // Hash new password
-      updateData.password = await bcrypt.hash(password, 10); // Use 10 rounds for bcrypt
+      updateData.password = await bcrypt.hash(newPassword, 5);
+      // Clear refresh token to force re-login
+      updateData.refresh_token = null;
     }
     
-    // If no updates provided
-    if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({
-        status: "Error",
-        message: "No update data provided"
-      });
-    }
+    // Update user
+    await user.update(updateData);
     
-    // Update the user
-    await User.update(updateData, {
-      where: { id: userId }
-    });
-    
-    // Fetch updated user data
-    const updatedUser = await User.findByPk(userId, {
-      attributes: ['id', 'email', 'username', 'role']
-    });
+    // Return updated user data (without password)
+    const { password: _, refresh_token: __, ...updatedUserData } = user.toJSON();
     
     res.status(200).json({
       status: "Success",
       message: "Profile updated successfully",
-      data: updatedUser
+      data: updatedUserData
     });
+    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      status: "Error",
-      message: error.message
+    console.log(error.message);
+    res.status(500).json({ 
+      status: "Error", 
+      message: error.message 
     });
   }
 }
@@ -282,40 +279,38 @@ async function updateProfile(req, res) {
 // Delete user (admin only)
 async function deleteUser(req, res) {
   try {
-    const userIdToDelete = req.params.id;
+    const userId = req.params.id;
     
-    // Check if user exists
-    const userToDelete = await User.findByPk(userIdToDelete);
-    
-    if (!userToDelete) {
-      return res.status(404).json({
-        status: "Error",
-        message: "User not found"
+    // Find the user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        status: "Error", 
+        message: "User not found" 
       });
     }
     
-    // Don't allow admins to delete themselves
-    if (req.userId == userIdToDelete) {
-      return res.status(400).json({
-        status: "Error",
-        message: "You cannot delete your own account"
+    // Prevent deleting admin users
+    if (user.role === 'admin') {
+      return res.status(403).json({ 
+        status: "Error", 
+        message: "Cannot delete admin users" 
       });
     }
     
     // Delete the user
-    await User.destroy({
-      where: { id: userIdToDelete }
-    });
+    await user.destroy();
     
     res.status(200).json({
       status: "Success",
       message: "User deleted successfully"
     });
+    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      status: "Error",
-      message: error.message
+    console.log(error.message);
+    res.status(500).json({ 
+      status: "Error", 
+      message: error.message 
     });
   }
 }

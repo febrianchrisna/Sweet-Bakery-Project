@@ -68,9 +68,6 @@ const Header = () => {
               
               {dropdownOpen && (
                 <div className="user-dropdown">
-                  <Link to="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                    My Profile
-                  </Link>
                   <button onClick={handleLogout} className="dropdown-item">
                     Logout
                   </button>

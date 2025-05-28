@@ -1,23 +1,19 @@
-import { useState, useEffect, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_URL } from '../../utils';
-import { AuthContext } from '../../context/AuthContext';
 
 const AdminDashboard = () => {
-  const { user: currentUser, logout } = useContext(AuthContext);
-  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
     pendingOrders: 0,
-    recentOrders: []
+    recentOrders: [],
+    totalUsers: 0,
+    recentUsers: []
   });
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [usersLoading, setUsersLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [userError, setUserError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
@@ -260,34 +256,30 @@ const AdminDashboard = () => {
       margin: '20px 0',
       fontSize: '1rem',
     },
-    // Admin navigation styles
-    adminNav: {
-      backgroundColor: 'white',
-      borderRadius: '15px',
-      padding: '20px',
-      marginBottom: '30px',
-      boxShadow: '0 5px 20px rgba(0, 0, 0, 0.05)',
+    successMessage: {
+      backgroundColor: 'rgba(76, 175, 80, 0.1)',
+      color: '#388E3C',
+      padding: '15px 20px',
+      borderRadius: '10px',
+      margin: '0 0 20px 0',
+      fontSize: '1rem',
+      borderLeft: '4px solid #388E3C',
     },
-    navTitle: {
-      fontSize: '1.2rem',
-      color: '#5A2828',
-      marginBottom: '15px',
+    deleteButton: {
+      padding: '8px 12px',
+      backgroundColor: 'rgba(244, 67, 54, 0.1)',
+      color: '#D32F2F',
+      border: 'none',
+      borderRadius: '6px',
       fontWeight: '600',
-    },
-    navLinks: {
-      display: 'flex',
-      gap: '15px',
-      flexWrap: 'wrap',
-    },
-    navLink: {
-      padding: '10px 20px',
-      backgroundColor: '#f5f5f5',
-      color: '#555',
-      borderRadius: '8px',
-      textDecoration: 'none',
-      fontWeight: '500',
+      cursor: 'pointer',
       transition: 'all 0.2s ease',
+      fontSize: '0.9rem',
     },
+    disabledButton: {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+    }
   };
 
   useEffect(() => {
@@ -295,77 +287,68 @@ const AdminDashboard = () => {
       try {
         setLoading(true);
         
-        // Get products count - check auth first
-        try {
-          // Simple auth check to ensure we're still logged in as admin
-          await axios.get(`${BASE_URL}/check-admin`);
-        } catch (authError) {
-          // If auth check fails, we won't try to load the other data
-          throw authError;
-        }
-        
-        // Now fetch the actual data
+        // Get products count
         const productsResponse = await axios.get(`${BASE_URL}/products`);
+        
+        // Get all orders
         const ordersResponse = await axios.get(`${BASE_URL}/orders`);
+        
+        // Get all users
+        const usersResponse = await axios.get(`${BASE_URL}/users`);
         
         // Calculate stats
         const allOrders = ordersResponse.data;
         const pendingOrders = allOrders.filter(order => order.status === 'pending');
-        const recentOrders = allOrders.slice(0, 5); // Get 5 most recent orders
+        const recentOrders = allOrders.slice(0, 5);
+        
+        const allUsers = usersResponse.data;
+        const recentUsers = allUsers.slice(-5).reverse(); // Get 5 most recent users
         
         setStats({
           totalProducts: productsResponse.data.length,
           totalOrders: allOrders.length,
           pendingOrders: pendingOrders.length,
-          recentOrders
+          recentOrders,
+          totalUsers: allUsers.length,
+          recentUsers
         });
         
         setLoading(false);
       } catch (err) {
         console.error('Error fetching admin stats:', err);
-        
-        // Show a more generic error message first
         setError('Failed to load dashboard data. Please try again later.');
         setLoading(false);
-        
-        // Don't auto-logout on error - let the user try again
-        // Only log out if it's a specific auth error that we can't recover from
-        if (err.response?.status === 403) {
-          // This is specifically a permission denied (not just expired token)
-          setError('You don\'t have admin permissions to view this page.');
-        }
       }
     };
 
-    // Only fetch data if we have a user and they're an admin
-    if (currentUser && currentUser.role === 'admin') {
-      fetchStats();
-    }
-  }, [currentUser]);
-
-  // Add function to fetch users
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setUsersLoading(true);
-        const response = await axios.get(`${BASE_URL}/users`);
-        setUsers(response.data);
-        setUsersLoading(false);
-      } catch (err) {
-        console.error('Error fetching users:', err);
-        
-        if (err.response?.status === 401) {
-          setUserError('Authentication error. Please log in again.');
-        } else {
-          setUserError('Failed to load users. Please try again later.');
-        }
-        
-        setUsersLoading(false);
-      }
-    };
-
-    fetchUsers();
+    fetchStats();
   }, []);
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setActionLoading(userId);
+      await axios.delete(`${BASE_URL}/users/${userId}`);
+      
+      // Remove user from the list
+      setStats(prevStats => ({
+        ...prevStats,
+        recentUsers: prevStats.recentUsers.filter(user => user.id !== userId),
+        totalUsers: prevStats.totalUsers - 1
+      }));
+      
+      setSuccessMessage('User deleted successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setActionLoading(null);
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setError(err.response?.data?.message || 'Failed to delete user. Please try again.');
+      setActionLoading(null);
+    }
+  };
 
   // Helper function to format date
   const formatDate = (dateString) => {
@@ -384,50 +367,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Helper function to handle user deletion
-  const handleDeleteUser = async (userId) => {
-    // Don't allow admins to delete themselves
-    if (userId === currentUser.id) {
-      setUserError("You cannot delete your own account");
-      setTimeout(() => setUserError(null), 3000);
-      return;
-    }
-    
-    if (!window.confirm(`Are you sure you want to delete this user? This action cannot be undone.`)) {
-      return;
-    }
-    
-    try {
-      setActionLoading(userId);
-      await axios.delete(`${BASE_URL}/users/${userId}`);
-      
-      // Update users list
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-      
-      // Show success message
-      setSuccessMessage(`User deleted successfully`);
-      setTimeout(() => setSuccessMessage(null), 3000);
-      
-      setActionLoading(null);
-    } catch (err) {
-      console.error('Error deleting user:', err);
-      
-      if (err.response?.status === 401) {
-        setUserError('Your session has expired. Please log in again.');
-        // Log out user and redirect to login after a delay
-        setTimeout(() => {
-          logout();
-          navigate('/login');
-        }, 3000);
-      } else {
-        setUserError(err.response?.data?.message || 'Failed to delete user. Please try again.');
-      }
-      
-      setTimeout(() => setUserError(null), 3000);
-      setActionLoading(null);
-    }
-  };
-
   return (
     <div style={styles.dashboardContainer}>
       <div style={styles.header}>
@@ -438,6 +377,8 @@ const AdminDashboard = () => {
       {loading && <div style={styles.loadingContainer}>Loading dashboard data...</div>}
       
       {error && <div style={styles.errorContainer}>{error}</div>}
+      
+      {successMessage && <div style={styles.successMessage}>{successMessage}</div>}
       
       {!loading && !error && (
         <>
@@ -644,51 +585,29 @@ const AdminDashboard = () => {
             </div>
           </div>
           
-          {/* User Management Section - Added proper margin to avoid overlap */}
-          <div style={{...styles.recentActivitySection, marginTop: '40px'}}>
+          {/* User Management Section */}
+          <div style={{...styles.recentActivitySection, marginTop: '30px'}}>
             <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>User Management</h2>
+              <h2 style={styles.sectionTitle}>User Management ({stats.totalUsers} total)</h2>
             </div>
             
             <div style={styles.sectionContent}>
-              {successMessage && <div style={{
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                color: '#388E3C',
-                padding: '15px 20px',
-                borderRadius: '8px',
-                margin: '20px',
-                fontSize: '0.95rem',
-                borderLeft: '4px solid #388E3C',
-              }}>{successMessage}</div>}
-              
-              {userError && <div style={{
-                backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                color: '#D32F2F',
-                padding: '15px 20px',
-                borderRadius: '8px',
-                margin: '20px',
-                fontSize: '0.95rem',
-                borderLeft: '4px solid #D32F2F',
-              }}>{userError}</div>}
-              
-              {usersLoading ? (
-                <div style={styles.loadingContainer}>Loading users...</div>
-              ) : users.length === 0 ? (
-                <div style={styles.noOrders}>No users found</div>
+              {stats.recentUsers.length === 0 ? (
+                <div style={styles.noOrders}>No users yet.</div>
               ) : (
                 <div style={styles.tableContainer}>
                   <table style={styles.table}>
                     <thead style={styles.tableHeader}>
                       <tr>
-                        <th style={styles.tableHeaderCell}>ID</th>
+                        <th style={styles.tableHeaderCell}>User ID</th>
                         <th style={styles.tableHeaderCell}>Username</th>
                         <th style={styles.tableHeaderCell}>Email</th>
                         <th style={styles.tableHeaderCell}>Role</th>
-                        <th style={styles.tableHeaderCell}>Actions</th>
+                        <th style={{...styles.tableHeaderCell, width: '150px'}}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {users.map(user => (
+                      {stats.recentUsers.map(user => (
                         <tr 
                           key={user.id} 
                           style={styles.tableRow}
@@ -699,46 +618,41 @@ const AdminDashboard = () => {
                             e.currentTarget.style.backgroundColor = 'transparent';
                           }}
                         >
-                          <td style={styles.tableCell}>{user.id}</td>
+                          <td style={{...styles.tableCell, ...styles.tableCellOrder}}>#{user.id}</td>
                           <td style={styles.tableCell}>{user.username}</td>
                           <td style={styles.tableCell}>{user.email}</td>
                           <td style={styles.tableCell}>
                             <span style={{
                               ...styles.statusBadge, 
-                              ...(user.role === 'admin' ? 
-                                {backgroundColor: 'rgba(244, 67, 54, 0.15)', color: '#D32F2F'} : 
-                                {backgroundColor: 'rgba(33, 150, 243, 0.15)', color: '#1976D2'})
+                              ...(user.role === 'admin' ? styles.statusCompleted : styles.statusPending)
                             }}>
-                              {user.role === 'admin' ? 'Admin' : 'Customer'}
+                              {user.role}
                             </span>
                           </td>
                           <td style={styles.tableCell}>
                             <button 
                               onClick={() => handleDeleteUser(user.id)}
+                              disabled={actionLoading === user.id || user.role === 'admin'}
                               style={{
-                                padding: '8px 15px',
-                                borderRadius: '6px',
-                                border: 'none',
-                                fontSize: '0.9rem',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                color: '#D32F2F',
-                                opacity: (actionLoading === user.id || user.id === currentUser.id) ? 0.5 : 1,
-                                cursor: (actionLoading === user.id || user.id === currentUser.id) ? 'not-allowed' : 'pointer'
+                                ...styles.deleteButton,
+                                ...(actionLoading === user.id ? styles.disabledButton : {}),
+                                ...(user.role === 'admin' ? { 
+                                  backgroundColor: '#ccc', 
+                                  color: '#999',
+                                  cursor: 'not-allowed'
+                                } : {})
                               }}
-                              disabled={actionLoading === user.id || user.id === currentUser.id}
                               onMouseOver={e => {
-                                if (actionLoading !== user.id && user.id !== currentUser.id) {
+                                if (actionLoading !== user.id && user.role !== 'admin') {
                                   e.target.style.backgroundColor = 'rgba(244, 67, 54, 0.2)';
                                 }
                               }}
                               onMouseOut={e => {
-                                if (actionLoading !== user.id && user.id !== currentUser.id) {
+                                if (actionLoading !== user.id && user.role !== 'admin') {
                                   e.target.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
                                 }
                               }}
+                              title={user.role === 'admin' ? 'Cannot delete admin users' : 'Delete user'}
                             >
                               {actionLoading === user.id ? 'Deleting...' : 'Delete'}
                             </button>

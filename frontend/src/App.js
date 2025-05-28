@@ -4,8 +4,6 @@ import { CartProvider } from "./context/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import Layout from "./components/Layout";
-import { useEffect } from "react";
-import { setupAxiosInterceptors } from './utils';
 
 // Pages
 import Home from "./pages/Home";
@@ -21,15 +19,9 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products";
 import AdminOrders from "./pages/admin/Orders";
 import NotFound from "./pages/NotFound";
-import Profile from "./pages/Profile";
-import AdminUsers from "./pages/admin/Users";
+import EditProfile from "./pages/EditProfile";
 
 function App() {
-  // Set up axios interceptors when the app mounts
-  useEffect(() => {
-    setupAxiosInterceptors();
-  }, []);
-
   return (
     <AuthProvider>
       <CartProvider>
@@ -60,9 +52,9 @@ function App() {
                   <OrderDetail />
                 </ProtectedRoute>
               } />
-              <Route path="/profile" element={
+              <Route path="/profile/edit" element={
                 <ProtectedRoute>
-                  <Profile />
+                  <EditProfile />
                 </ProtectedRoute>
               } />
               
@@ -80,11 +72,6 @@ function App() {
               <Route path="/admin/orders" element={
                 <AdminRoute>
                   <AdminOrders />
-                </AdminRoute>
-              } />
-              <Route path="/admin/users" element={
-                <AdminRoute>
-                  <AdminUsers />
                 </AdminRoute>
               } />
               

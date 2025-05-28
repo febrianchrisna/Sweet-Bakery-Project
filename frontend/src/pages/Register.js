@@ -15,7 +15,6 @@ const Register = () => {
   const { register } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Modern bakery design styles
   const styles = {
     pageContainer: {
       minHeight: '100vh',
@@ -208,9 +207,13 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Simple validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
+      return;
+    }
+    
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
       return;
     }
     
@@ -218,11 +221,14 @@ const Register = () => {
     setError(null);
 
     try {
-      await register(formData.username, formData.email, formData.password);
-      navigate('/login');
+      const success = await register(formData.email, formData.username, formData.password);
+      if (success) {
+        navigate('/login', { 
+          state: { message: 'Registration successful! Please log in.' }
+        });
+      }
     } catch (err) {
       console.error('Registration failed:', err);
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -246,86 +252,55 @@ const Register = () => {
       <div style={styles.registerCard}>
         <div style={styles.cardHeader}>
           <svg style={styles.bakeryIcon} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M3 6H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 4C10.3431 4 9 5.34315 9 7C9 8.65685 10.3431 10 12 10C13.6569 10 15 8.65685 15 7C15 5.34315 13.6569 4 12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M3 12C3 10.3431 4.34315 9 6 9C7.65685 9 9 10.3431 9 12C9 13.6569 7.65685 15 6 15C4.34315 15 3 13.6569 3 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M15 12C15 10.3431 16.3431 9 18 9C19.6569 9 21 10.3431 21 12C21 13.6569 19.6569 15 18 15C16.3431 15 15 13.6569 15 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6 15C6 16.6569 8.68629 18 12 18C15.3137 18 18 16.6569 18 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6 15V18C6 19.6569 8.68629 21 12 21C15.3137 21 18 19.6569 18 18V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <h1 style={styles.headerTitle}>Create Account</h1>
-          <p style={styles.headerSubtitle}>Join our bakery community</p>
+          <h1 style={styles.headerTitle}>Join Sweet Bakery</h1>
+          <p style={styles.headerSubtitle}>Create your account to start ordering</p>
           <div style={styles.decorativeElement}></div>
         </div>
         
         <div style={styles.cardBody}>
+          <div style={styles.formNote}>
+            <svg style={styles.noteIcon} width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H19C20.11 23 21 22.11 21 21V9M12 7L17 12H14V19H10V12H7L12 7Z" fill="currentColor"/>
+            </svg>
+            Join our bakery family and enjoy fresh baked goods delivered to your door!
+          </div>
+          
           {error && (
             <div style={styles.errorContainer}>
               {error}
             </div>
           )}
           
-          <div style={styles.formNote}>
-            <svg style={styles.noteIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M12 8V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Create an account to place orders, save your favorite items, and check your order history.
-          </div>
-          
           <form onSubmit={handleSubmit}>
-            <div style={styles.formGroup}>
-              <label style={styles.formLabel} htmlFor="username">Username</label>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                style={styles.formInput}
-                onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
-                onBlur={e => e.target.style.boxShadow = 'none'}
-                required
-              />
-            </div>
-            
-            <div style={styles.formGroup}>
-              <label style={styles.formLabel} htmlFor="email">Email Address</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                style={styles.formInput}
-                onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
-                onBlur={e => e.target.style.boxShadow = 'none'}
-                required
-              />
-            </div>
-            
             <div style={styles.formRow}>
               <div style={styles.formGroup}>
-                <label style={styles.formLabel} htmlFor="password">Password</label>
+                <label style={styles.formLabel} htmlFor="username">Full Name</label>
                 <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
                   onChange={handleChange}
                   style={styles.formInput}
                   onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
                   onBlur={e => e.target.style.boxShadow = 'none'}
                   required
                 />
-                <p style={styles.passwordTips}>At least 8 characters</p>
               </div>
               
               <div style={styles.formGroup}>
-                <label style={styles.formLabel} htmlFor="confirmPassword">Confirm Password</label>
+                <label style={styles.formLabel} htmlFor="email">Email Address</label>
                 <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
                   onChange={handleChange}
                   style={styles.formInput}
                   onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
@@ -333,6 +308,39 @@ const Register = () => {
                   required
                 />
               </div>
+            </div>
+            
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel} htmlFor="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                style={styles.formInput}
+                onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
+                onBlur={e => e.target.style.boxShadow = 'none'}
+                required
+              />
+              <div style={styles.passwordTips}>
+                Password should be at least 6 characters long
+              </div>
+            </div>
+            
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel} htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                style={styles.formInput}
+                onFocus={e => e.target.style.boxShadow = styles.formInputFocus.boxShadow}
+                onBlur={e => e.target.style.boxShadow = 'none'}
+                required
+              />
             </div>
             
             <button 
@@ -377,7 +385,7 @@ const Register = () => {
                 e.target.style.textDecoration = 'none';
               }}
             >
-              Sign In
+              Sign in here
             </Link>
           </div>
         </div>
