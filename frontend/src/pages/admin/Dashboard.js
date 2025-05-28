@@ -251,7 +251,35 @@ const AdminDashboard = () => {
       borderRadius: '10px',
       margin: '20px 0',
       fontSize: '1rem',
-    }
+    },
+    // Admin navigation styles
+    adminNav: {
+      backgroundColor: 'white',
+      borderRadius: '15px',
+      padding: '20px',
+      marginBottom: '30px',
+      boxShadow: '0 5px 20px rgba(0, 0, 0, 0.05)',
+    },
+    navTitle: {
+      fontSize: '1.2rem',
+      color: '#5A2828',
+      marginBottom: '15px',
+      fontWeight: '600',
+    },
+    navLinks: {
+      display: 'flex',
+      gap: '15px',
+      flexWrap: 'wrap',
+    },
+    navLink: {
+      padding: '10px 20px',
+      backgroundColor: '#f5f5f5',
+      color: '#555',
+      borderRadius: '8px',
+      textDecoration: 'none',
+      fontWeight: '500',
+      transition: 'all 0.2s ease',
+    },
   };
 
   useEffect(() => {
@@ -318,6 +346,41 @@ const AdminDashboard = () => {
       
       {!loading && !error && (
         <>
+          {/* Admin Navigation Menu */}
+          <div style={styles.adminNav}>
+            <h3 style={styles.navTitle}>Admin Menu</h3>
+            <div style={styles.navLinks}>
+              <Link 
+                to="/admin" 
+                style={styles.navLink}
+                className={window.location.pathname === '/admin' ? 'active' : ''}
+              >
+                Dashboard
+              </Link>
+              <Link 
+                to="/admin/products" 
+                style={styles.navLink}
+                className={window.location.pathname === '/admin/products' ? 'active' : ''}
+              >
+                Products
+              </Link>
+              <Link 
+                to="/admin/orders" 
+                style={styles.navLink}
+                className={window.location.pathname === '/admin/orders' ? 'active' : ''}
+              >
+                Orders
+              </Link>
+              <Link 
+                to="/admin/users" 
+                style={styles.navLink}
+                className={window.location.pathname === '/admin/users' ? 'active' : ''}
+              >
+                Users
+              </Link>
+            </div>
+          </div>
+          
           <div style={styles.statsContainer}>
             {/* Products Card */}
             <div 

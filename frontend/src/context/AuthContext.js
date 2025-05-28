@@ -150,7 +150,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Context value
+  // Add this function to update the user in the context
+  const updateUser = (updatedUserData) => {
+    setUser(updatedUserData);
+    
+    // Also update in localStorage
+    const userData = JSON.parse(localStorage.getItem('auth_user'));
+    if (userData) {
+      const updatedData = { ...userData, ...updatedUserData };
+      localStorage.setItem('auth_user', JSON.stringify(updatedData));
+    }
+  };
+
+  // Context value - add updateUser to the context value
   const value = {
     isAuthenticated,
     isAdmin,
@@ -160,7 +172,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     authError,
-    token
+    token,
+    updateUser  // Add this to the context
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -244,7 +244,7 @@ async function updateProfile(req, res) {
       }
       
       // Hash new password
-      updateData.password = await bcrypt.hash(password, 5);
+      updateData.password = await bcrypt.hash(password, 10); // Use 10 rounds for bcrypt
     }
     
     // If no updates provided

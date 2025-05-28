@@ -5,7 +5,7 @@ import { AuthContext } from '../context/AuthContext';
 import { BASE_URL } from '../utils';
 
 const Profile = () => {
-  const { user, setUser, logout } = useContext(AuthContext);
+  const { user, updateUser } = useContext(AuthContext); // Use updateUser from context
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -245,13 +245,10 @@ const Profile = () => {
       );
       
       if (response.data.status === 'Success') {
-        // Update user in auth context
-        setUser(response.data.data);
-        
-        // Update user in localStorage
-        const userData = JSON.parse(localStorage.getItem('auth_user'));
-        userData.username = formData.username;
-        localStorage.setItem('auth_user', JSON.stringify(userData));
+        // Use the updateUser function from context
+        updateUser({
+          username: formData.username
+        });
         
         // Show success message
         setSuccessMessage('Profile updated successfully');
