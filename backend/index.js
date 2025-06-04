@@ -13,25 +13,33 @@ const app = express();
 // Use cookie parser middleware BEFORE routes
 app.use(cookieParser());
 
-// Configure CORS for deployment
+// Configure CORS for deployment - PERBAIKAN
 app.use(cors({
   // Allow requests from these origins (add your frontend URL)
   origin: [
     'https://frontend-bakery-dot-g-09-450802.uc.r.appspot.com', // Your actual frontend URL
     'http://localhost:3000'
   ],
-  // Allow credentials (cookies)
+  // Allow credentials (cookies) - WAJIB untuk cookies
   credentials: true,
   // Allowed HTTP methods
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   // Allowed headers
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Set-Cookie'],
   // Expose headers that frontend can access
-  exposedHeaders: ['Set-Cookie']
+  exposedHeaders: ['Set-Cookie'],
+  // Preflight cache
+  optionsSuccessStatus: 200
 }));
 
-// Handle preflight requests
-app.options('*', cors());
+// Handle preflight requests SEBELUM routes lain
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,Cookie,Set-Cookie');
+  res.sendStatus(200);
+});
 
 // Parse JSON bodies
 app.use(express.json());

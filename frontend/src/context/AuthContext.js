@@ -68,7 +68,6 @@ export const AuthProvider = ({ children }) => {
       // Jangan logout pada error lain seperti timeout atau server error
       if (error.response?.status === 403) {
         console.log('Refresh token invalid or expired, logging out');
-        // Untuk deployment, tambahkan delay sebelum logout
         setTimeout(() => {
           logout();
         }, 1000);
@@ -79,7 +78,7 @@ export const AuthProvider = ({ children }) => {
         }, 1000);
       } else {
         console.log('Refresh failed with status:', error.response?.status, '- will retry later');
-        // Jangan logout, biarkan timer mencoba lagi
+        // TIDAK logout, biarkan timer mencoba lagi
       }
       throw error;
     } finally {
@@ -161,9 +160,18 @@ export const AuthProvider = ({ children }) => {
     // Configure axios globally to include credentials for all requests
     axios.defaults.withCredentials = true;
     
+    // Tambah headers default untuk deployment
+    axios.defaults.headers.common['Content-Type'] = 'application/json';
+    
     // Add a response interceptor to handle token expiration
     const responseInterceptor = axios.interceptors.response.use(
-      response => response,
+      response => {
+        // Log successful responses untuk debugging
+        if (response.config.url?.includes('/token')) {
+          console.log('Token refresh response:', response.data);
+        }
+        return response;
+      },
       async error => {
         const originalRequest = error.config;
         
@@ -255,7 +263,7 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  // Login function
+  // Login function - PERBAIKAN
   const login = async (email, password) => {
     try {
       setAuthError('');
@@ -268,9 +276,18 @@ export const AuthProvider = ({ children }) => {
         { email, password },
         { 
           withCredentials: true,
-          timeout: 10000 // 10 second timeout
+          timeout: 15000, // Increase timeout for deployment
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
       );
+
+      console.log('Login response received:', {
+        status: response.data.status,
+        hasAccessToken: !!response.data.accessToken,
+        hasUserData: !!response.data.safeUserData
+      });
 
       if (response.data.status === "Success") {
         // Store user data in localStorage
@@ -286,6 +303,7 @@ export const AuthProvider = ({ children }) => {
           setTokenExpiryTime(expiryTime);
           
           console.log('Login successful, token will refresh in 25 seconds');
+          console.log('Refresh token should now be in cookies (check DevTools > Application > Cookies)');
         }
         
         // Update state

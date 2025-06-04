@@ -111,22 +111,26 @@ async function login(req, res) {
             }
           );
   
-          // Set refresh token in HTTP-only cookie untuk deployment
+          // Set refresh token in HTTP-only cookie - PERBAIKAN UNTUK DEPLOYMENT
           res.cookie("refresh_token", refreshToken, {
             httpOnly: true,
-            sameSite: "none", // PENTING: untuk deployment cross-origin
+            sameSite: "none", // WAJIB untuk cross-origin deployment
             maxAge: 24 * 60 * 60 * 1000, // 1 day
-            secure: true, // PENTING: selalu true untuk deployment HTTPS
+            secure: true, // WAJIB true untuk HTTPS deployment
             path: "/",
+            // Tambahkan domain untuk App Engine
+            domain: process.env.NODE_ENV === "production" ? ".appspot.com" : undefined
           });
 
-          console.log('Refresh token set in cookie for deployment:', {
+          console.log('Refresh token set in cookie - DEPLOYMENT MODE:', {
+            tokenExists: !!refreshToken,
             tokenLength: refreshToken.length,
             cookieSettings: {
               httpOnly: true,
               sameSite: "none",
               secure: true,
-              maxAge: 24 * 60 * 60 * 1000
+              maxAge: 24 * 60 * 60 * 1000,
+              domain: process.env.NODE_ENV === "production" ? ".appspot.com" : undefined
             }
           });
   
@@ -172,15 +176,16 @@ async function logout(req, res) {
       );
     }
     
-    // Clear refresh token cookie untuk deployment
+    // Clear refresh token cookie - PERBAIKAN UNTUK DEPLOYMENT
     res.clearCookie("refresh_token", {
       httpOnly: true,
       sameSite: "none",
       secure: true,
       path: "/",
+      domain: process.env.NODE_ENV === "production" ? ".appspot.com" : undefined
     });
 
-    console.log('Refresh token cookie cleared for deployment');
+    console.log('Refresh token cookie cleared - DEPLOYMENT MODE');
     
     res.status(200).json({
       status: "Success",
