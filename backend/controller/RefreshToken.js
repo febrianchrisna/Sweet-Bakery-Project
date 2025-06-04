@@ -3,13 +3,17 @@ import jwt from "jsonwebtoken";
 
 export const refreshToken = async (req, res) => {
   try {
-    // Get the refresh token from cookies
+    console.log('Refresh token request received');
+    console.log('All cookies:', req.cookies);
+    
+    // Get the refresh token from cookies ONLY
     const refreshToken = req.cookies.refresh_token;
 
     console.log('Refresh token from cookies:', refreshToken ? 'Present' : 'Not found');
 
-    // If no refresh token is provided
+    // If no refresh token is provided in cookies
     if (!refreshToken) {
+      console.log('No refresh token cookie found');
       return res.status(401).json({
         status: "Error",
         message: "Refresh token required - no cookie found",
@@ -25,6 +29,7 @@ export const refreshToken = async (req, res) => {
 
     // If user not found or token doesn't match
     if (!user || !user.refresh_token) {
+      console.log('User not found or token mismatch');
       return res.status(403).json({
         status: "Error",
         message: "Invalid refresh token - user not found or token mismatch",
@@ -56,9 +61,9 @@ export const refreshToken = async (req, res) => {
           }
         );
 
-        console.log('New access token generated successfully');
+        console.log('New access token generated successfully for user:', safeUserData.id);
 
-        // Return the new access token
+        // Return the new access token (refresh token stays in cookie)
         res.json({
           status: "Success",
           accessToken,

@@ -10,12 +10,14 @@ dotenv.config();
 
 const app = express();
 
+// Use cookie parser middleware BEFORE routes
+app.use(cookieParser());
+
 // Configure CORS for deployment
 app.use(cors({
   // Allow requests from these origins (add your frontend URL)
   origin: [
-    'https://frontend-bakery-dot-g-09-450802.uc.r.appspot.com',
-    'https://bakery-fe-663618957788.us-central1.run.app',
+    'https://frontend-bakery-dot-g-09-450802.uc.r.appspot.com', // Your actual frontend URL
     'http://localhost:3000'
   ],
   // Allow credentials (cookies)
@@ -30,9 +32,6 @@ app.use(cors({
 
 // Handle preflight requests
 app.options('*', cors());
-
-// Parse cookies - set proper options
-app.use(cookieParser());
 
 // Parse JSON bodies
 app.use(express.json());
