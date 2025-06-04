@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { BASE_URL } from '../utils';
 
@@ -26,8 +26,8 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Function to refresh token - now using cookies
-  const refreshAccessToken = async () => {
+  // Function to refresh token - uses cookies
+  const refreshAccessToken = useCallback(async () => {
     try {
       setIsRefreshing(true);
       
@@ -42,8 +42,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('auth_token', response.data.accessToken);
         setToken(response.data.accessToken);
         
-        // Calculate and store token expiry time (30 minutes from now, but refresh 1 minute early)
-        const expiryTime = new Date().getTime() + 29 * 60 * 1000; // 29 minutes in ms
+        // Calculate and store token expiry time (30 seconds, but refresh 5 seconds early)
+        const expiryTime = new Date().getTime() + 25 * 1000; // 25 seconds in ms
         setTokenExpiryTime(expiryTime);
         
         return response.data.accessToken;
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   // Add subscribers to be executed after token refresh
   const subscribeToTokenRefresh = (callback) => {
@@ -80,7 +80,9 @@ export const AuthProvider = ({ children }) => {
       
       // Only set timer if the token is not already expired
       if (timeUntilRefresh > 0) {
+        console.log(`Token will be refreshed in ${timeUntilRefresh/1000} seconds`);
         const refreshTimer = setTimeout(() => {
+          console.log('Refreshing token proactively');
           refreshAccessToken()
             .catch(error => console.error('Failed to refresh token:', error));
         }, timeUntilRefresh);
@@ -89,11 +91,12 @@ export const AuthProvider = ({ children }) => {
         return () => clearTimeout(refreshTimer);
       } else {
         // If token is already expired, refresh it immediately
+        console.log('Token already expired, refreshing immediately');
         refreshAccessToken()
           .catch(error => console.error('Failed to refresh token:', error));
       }
     }
-  }, [token, tokenExpiryTime]);
+  }, [token, tokenExpiryTime, refreshAccessToken]);
 
   // Set up axios interceptors for token refresh
   useEffect(() => {
@@ -140,7 +143,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       axios.interceptors.response.eject(interceptor);
     };
-  }, [isRefreshing]); // Only re-initialize when isRefreshing changes
+  }, [isRefreshing, refreshAccessToken]);
 
   useEffect(() => {
     // Check if user is already authenticated via token in localStorage
@@ -162,8 +165,8 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true);
           setIsAdmin(userData.role === 'admin');
           
-          // Calculate token expiry (assume token was recently issued)
-          const expiryTime = new Date().getTime() + 29 * 60 * 1000; // 29 minutes in ms
+          // Calculate token expiry (for a 30-second token, refresh after 25 seconds)
+          const expiryTime = new Date().getTime() + 25 * 1000; // 25 seconds in ms
           setTokenExpiryTime(expiryTime);
         } catch (error) {
           console.log('Stored token invalid, clearing auth data');
@@ -200,8 +203,8 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('auth_token', response.data.accessToken);
           setToken(response.data.accessToken);
           
-          // Calculate token expiry time (30 minutes from now, but refresh 1 minute early)
-          const expiryTime = new Date().getTime() + 29 * 60 * 1000; // 29 minutes in ms
+          // Calculate token expiry time (30 seconds, but refresh 5 seconds early)
+          const expiryTime = new Date().getTime() + 25 * 1000; // 25 seconds in ms
           setTokenExpiryTime(expiryTime);
         }
         

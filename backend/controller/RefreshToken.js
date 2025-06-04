@@ -8,7 +8,8 @@ export const refreshToken = async (req, res) => {
       req.body.refreshToken ||
       (req.headers.authorization &&
         req.headers.authorization.startsWith("Bearer ") &&
-        req.headers.authorization.split(" ")[1]);
+        req.headers.authorization.split(" ")[1]) ||
+      req.cookies.refresh_token; // Also check for refresh token in cookies
 
     // If no refresh token is provided
     if (!refreshToken)
@@ -47,12 +48,12 @@ export const refreshToken = async (req, res) => {
         const userPlain = user.toJSON();
         const { password: _, refresh_token: __, ...safeUserData } = userPlain;
 
-        // Generate new access token
+        // Generate new access token that expires in 30 SECONDS
         const accessToken = jwt.sign(
           safeUserData,
           process.env.ACCESS_TOKEN_SECRET,
           {
-            expiresIn: "30m",
+            expiresIn: "30s", // 30 seconds, not minutes
           }
         );
 
