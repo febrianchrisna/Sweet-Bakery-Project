@@ -64,12 +64,22 @@ export const AuthProvider = ({ children }) => {
         throw error; // Don't logout on network errors
       }
       
-      // Only logout if it's a 403 error (invalid refresh token) or 401 (unauthorized)
-      if (error.response?.status === 403 || error.response?.status === 401) {
+      // PENTING: Hanya logout jika refresh token benar-benar tidak valid
+      // Jangan logout pada error lain seperti timeout atau server error
+      if (error.response?.status === 403) {
         console.log('Refresh token invalid or expired, logging out');
-        logout();
+        // Untuk deployment, tambahkan delay sebelum logout
+        setTimeout(() => {
+          logout();
+        }, 1000);
+      } else if (error.response?.status === 401) {
+        console.log('No refresh token found, logging out');
+        setTimeout(() => {
+          logout();
+        }, 1000);
       } else {
         console.log('Refresh failed with status:', error.response?.status, '- will retry later');
+        // Jangan logout, biarkan timer mencoba lagi
       }
       throw error;
     } finally {
@@ -106,7 +116,17 @@ export const AuthProvider = ({ children }) => {
         const timer = setTimeout(() => {
           console.log('Refreshing token proactively');
           refreshAccessToken()
-            .catch(error => console.error('Failed to refresh token:', error));
+            .catch(error => {
+              console.error('Failed to refresh token:', error);
+              // Jika gagal refresh, coba lagi dalam 5 detik
+              if (error.response?.status !== 403 && error.response?.status !== 401) {
+                console.log('Scheduling retry in 5 seconds...');
+                setTimeout(() => {
+                  const retryExpiryTime = new Date().getTime() + 5 * 1000;
+                  setTokenExpiryTime(retryExpiryTime);
+                }, 5000);
+              }
+            });
         }, timeUntilRefresh);
         
         setRefreshTimer(timer);
@@ -114,7 +134,17 @@ export const AuthProvider = ({ children }) => {
         // If token is already expired, refresh it immediately
         console.log('Token already expired, refreshing immediately');
         refreshAccessToken()
-          .catch(error => console.error('Failed to refresh token:', error));
+          .catch(error => {
+            console.error('Failed to refresh token:', error);
+            // Retry logic untuk expired token
+            if (error.response?.status !== 403 && error.response?.status !== 401) {
+              console.log('Scheduling immediate retry...');
+              setTimeout(() => {
+                const retryExpiryTime = new Date().getTime() + 2 * 1000;
+                setTokenExpiryTime(retryExpiryTime);
+              }, 2000);
+            }
+          });
       }
     }
 
@@ -206,18 +236,11 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true);
           setIsAdmin(userData.role === 'admin');
           
-          // Try to refresh token immediately to check if refresh token cookie is still valid
-          console.log('Checking if refresh token cookie is still valid...');
-          try {
-            await refreshAccessToken();
-          } catch (refreshError) {
-            console.log('Refresh token not valid, but keeping user logged in temporarily');
-            // Set a shorter expiry to force refresh attempt soon
-            const expiryTime = new Date().getTime() + 5 * 1000; // 5 seconds
-            setTokenExpiryTime(expiryTime);
-          }
+          // Untuk deployment: langsung set refresh cycle tanpa test refresh dulu
+          const expiryTime = new Date().getTime() + 25 * 1000; // 25 seconds in ms
+          setTokenExpiryTime(expiryTime);
           
-          console.log('Restored authentication from localStorage');
+          console.log('Restored authentication from localStorage, refresh cycle started');
         } catch (error) {
           console.log('Stored token invalid, clearing auth data');
           localStorage.removeItem('auth_token');
@@ -230,7 +253,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuth();
-  }, [refreshAccessToken]);
+  }, []);
 
   // Login function
   const login = async (email, password) => {

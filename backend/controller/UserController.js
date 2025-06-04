@@ -111,21 +111,21 @@ async function login(req, res) {
             }
           );
   
-          // Set refresh token in HTTP-only cookie for deployed environment
+          // Set refresh token in HTTP-only cookie untuk deployment
           res.cookie("refresh_token", refreshToken, {
             httpOnly: true,
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            sameSite: "none", // PENTING: untuk deployment cross-origin
             maxAge: 24 * 60 * 60 * 1000, // 1 day
-            secure: process.env.NODE_ENV === "production", // true for production (HTTPS)
+            secure: true, // PENTING: selalu true untuk deployment HTTPS
             path: "/",
           });
 
-          console.log('Refresh token set in cookie:', {
+          console.log('Refresh token set in cookie for deployment:', {
             tokenLength: refreshToken.length,
             cookieSettings: {
               httpOnly: true,
-              sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-              secure: process.env.NODE_ENV === "production",
+              sameSite: "none",
+              secure: true,
               maxAge: 24 * 60 * 60 * 1000
             }
           });
@@ -136,7 +136,6 @@ async function login(req, res) {
             message: "Login Successful",
             safeUserData,
             accessToken
-            // NOTE: We don't send refresh token in response body for security
           });
         } else {
           const error = new Error("Password or email incorrect");
@@ -173,15 +172,15 @@ async function logout(req, res) {
       );
     }
     
-    // Clear refresh token cookie with same settings used to set it
+    // Clear refresh token cookie untuk deployment
     res.clearCookie("refresh_token", {
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      secure: true,
       path: "/",
     });
 
-    console.log('Refresh token cookie cleared');
+    console.log('Refresh token cookie cleared for deployment');
     
     res.status(200).json({
       status: "Success",
