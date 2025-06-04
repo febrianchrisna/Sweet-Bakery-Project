@@ -14,6 +14,7 @@ export const AuthProvider = ({ children }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshSubscribers, setRefreshSubscribers] = useState([]);
   const [tokenExpiryTime, setTokenExpiryTime] = useState(null);
+  const [refreshTimer, setRefreshTimer] = useState(null);
 
   // Configure axios to use authorization header for every request when token exists
   useEffect(() => {
@@ -42,18 +43,22 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('auth_token', response.data.accessToken);
         setToken(response.data.accessToken);
         
-        // Calculate and store token expiry time (30 seconds, but refresh 5 seconds early)
+        // Calculate and store token expiry time (refresh 5 seconds before expiration)
         const expiryTime = new Date().getTime() + 25 * 1000; // 25 seconds in ms
         setTokenExpiryTime(expiryTime);
         
+        console.log('Token refreshed successfully, next refresh in 25 seconds');
         return response.data.accessToken;
       } else {
         throw new Error('Failed to refresh token');
       }
     } catch (error) {
       console.error('Token refresh failed:', error);
-      // Force logout on refresh failure
-      logout();
+      // Only logout if it's a 403 error (invalid refresh token)
+      if (error.response?.status === 403) {
+        console.log('Refresh token invalid, logging out');
+        logout();
+      }
       throw error;
     } finally {
       setIsRefreshing(false);
@@ -73,6 +78,11 @@ export const AuthProvider = ({ children }) => {
 
   // Set up a timer to refresh the token before it expires
   useEffect(() => {
+    // Clear existing timer
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
+    }
+
     // Only set up timer if we have a token and expiry time
     if (token && tokenExpiryTime) {
       const currentTime = new Date().getTime();
@@ -81,14 +91,13 @@ export const AuthProvider = ({ children }) => {
       // Only set timer if the token is not already expired
       if (timeUntilRefresh > 0) {
         console.log(`Token will be refreshed in ${timeUntilRefresh/1000} seconds`);
-        const refreshTimer = setTimeout(() => {
+        const timer = setTimeout(() => {
           console.log('Refreshing token proactively');
           refreshAccessToken()
             .catch(error => console.error('Failed to refresh token:', error));
         }, timeUntilRefresh);
         
-        // Clean up timer
-        return () => clearTimeout(refreshTimer);
+        setRefreshTimer(timer);
       } else {
         // If token is already expired, refresh it immediately
         console.log('Token already expired, refreshing immediately');
@@ -96,6 +105,13 @@ export const AuthProvider = ({ children }) => {
           .catch(error => console.error('Failed to refresh token:', error));
       }
     }
+
+    // Cleanup function
+    return () => {
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+      }
+    };
   }, [token, tokenExpiryTime, refreshAccessToken]);
 
   // Set up axios interceptors for token refresh
@@ -129,7 +145,7 @@ export const AuthProvider = ({ children }) => {
               onTokenRefreshed(newToken);
               return axios(originalRequest);
             } catch (refreshError) {
-              // If refresh fails, redirect to login
+              // If refresh fails, don't retry the original request
               return Promise.reject(refreshError);
             }
           }
@@ -165,9 +181,11 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true);
           setIsAdmin(userData.role === 'admin');
           
-          // Calculate token expiry (for a 30-second token, refresh after 25 seconds)
+          // Start the refresh cycle immediately for existing sessions
           const expiryTime = new Date().getTime() + 25 * 1000; // 25 seconds in ms
           setTokenExpiryTime(expiryTime);
+          
+          console.log('Restored authentication from localStorage');
         } catch (error) {
           console.log('Stored token invalid, clearing auth data');
           localStorage.removeItem('auth_token');
@@ -203,9 +221,11 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('auth_token', response.data.accessToken);
           setToken(response.data.accessToken);
           
-          // Calculate token expiry time (30 seconds, but refresh 5 seconds early)
+          // Calculate token expiry time (refresh 5 seconds before expiration)
           const expiryTime = new Date().getTime() + 25 * 1000; // 25 seconds in ms
           setTokenExpiryTime(expiryTime);
+          
+          console.log('Login successful, token will refresh in 25 seconds');
         }
         
         // Update state
@@ -252,7 +272,6 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (userData) => {
     try {
       setAuthError('');
-      // Pastikan menggunakan endpoint yang benar
       const response = await axios.put(`${BASE_URL}/user/profile`, userData);
       
       // If username was updated, update the local user data
@@ -261,9 +280,6 @@ export const AuthProvider = ({ children }) => {
         setUser(updatedUser);
         localStorage.setItem('auth_user', JSON.stringify(updatedUser));
       }
-      
-      // Jangan logout otomatis saat password diubah
-      // Hapus kode yang menyebabkan logout otomatis
       
       return response.data;
     } catch (error) {
@@ -279,8 +295,13 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = async () => {
     try {
-      // First, clear auth state and localStorage
-      // This way, even if the server request fails, the user will still be logged out in the frontend
+      // Clear refresh timer
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        setRefreshTimer(null);
+      }
+
+      // Clear auth state and localStorage first
       setToken(null);
       setUser(null);
       setIsAuthenticated(false);
@@ -294,12 +315,12 @@ export const AuthProvider = ({ children }) => {
       // Clear Authorization header
       delete axios.defaults.headers.common['Authorization'];
       
-      // Try to logout on the server side, but don't block the logout process if it fails
+      // Try to logout on the server side to clear refresh token cookie
       try {
-        // Make sure withCredentials is true to send cookies
         await axios.get(`${BASE_URL}/logout`, { 
           withCredentials: true 
         });
+        console.log('Server logout successful');
       } catch (serverError) {
         console.log('Server logout failed, but user was logged out locally:', serverError);
       }

@@ -90,7 +90,7 @@ async function login(req, res) {
             safeUserData,
             process.env.ACCESS_TOKEN_SECRET,
             {
-              expiresIn: "30s", // Changed from "30m" to "30s" for 30 seconds
+              expiresIn: "30s", // 30 seconds
             }
           );
   
@@ -111,31 +111,22 @@ async function login(req, res) {
             }
           );
   
-          // Set access token in cookie - with more permissive settings
-          res.cookie("access_token", accessToken, {
-            httpOnly: true,
-            sameSite: "lax", // Changed from "none" to "lax"
-            maxAge: 30 * 60 * 1000, // 30 minutes
-            secure: process.env.NODE_ENV === "production", // Only secure in production
-            path: "/"
-          });
-
-          // Set refresh token in cookie
+          // Set refresh token in HTTP-only cookie for deployment
           res.cookie("refresh_token", refreshToken, {
             httpOnly: true,
-            sameSite: "lax", // Changed from "none" to "lax"
+            sameSite: "none", // Required for cross-origin cookies in deployment
             maxAge: 24 * 60 * 60 * 1000, // 1 day
-            secure: process.env.NODE_ENV === "production", // Only secure in production
-            path: "/"
+            secure: true, // Always true for deployment (HTTPS)
+            path: "/",
+            domain: ".appspot.com" // Allow across subdomains
           });
   
-          // Also send tokens in response body as fallback
+          // Send access token in response body for localStorage
           res.status(200).json({
             status: "Success",
             message: "Login Successful",
             safeUserData,
-            accessToken,
-            refreshToken
+            accessToken
           });
         } else {
           const error = new Error("Password or email incorrect");
@@ -172,19 +163,13 @@ async function logout(req, res) {
       );
     }
     
-    // Clear cookies with the same settings that were used to set them
-    res.clearCookie("access_token", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/"
-    });
-    
+    // Clear refresh token cookie with same settings used to set it
     res.clearCookie("refresh_token", {
       httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/"
+      sameSite: "none",
+      secure: true,
+      path: "/",
+      domain: ".appspot.com"
     });
     
     res.status(200).json({

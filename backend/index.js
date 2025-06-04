@@ -22,7 +22,9 @@ app.use(cors({
   // Allowed HTTP methods
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   // Allowed headers
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  // Expose headers that frontend can access
+  exposedHeaders: ['Set-Cookie']
 }));
 
 // Parse cookies - set proper options
