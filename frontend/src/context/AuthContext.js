@@ -119,10 +119,31 @@ export const AuthProvider = ({ children }) => {
     // Configure axios globally to include credentials for all requests
     axios.defaults.withCredentials = true;
     
+    // Add request interceptor for debugging
+    const requestInterceptor = axios.interceptors.request.use(
+      config => {
+        console.log('Making request to:', config.url);
+        console.log('With credentials:', config.withCredentials);
+        return config;
+      },
+      error => {
+        console.error('Request error:', error);
+        return Promise.reject(error);
+      }
+    );
+    
     // Add a response interceptor to handle token expiration
-    const interceptor = axios.interceptors.response.use(
+    const responseInterceptor = axios.interceptors.response.use(
       response => response,
       async error => {
+        console.error('Response error:', error);
+        
+        // Handle network errors
+        if (error.code === 'ERR_NETWORK') {
+          console.error('Network error - check if backend is running and CORS is configured');
+          return Promise.reject(error);
+        }
+
         const originalRequest = error.config;
         
         // If error is 401 (Unauthorized) and not a retry attempt
@@ -155,9 +176,10 @@ export const AuthProvider = ({ children }) => {
       }
     );
     
-    // Clean up interceptor on unmount
+    // Clean up interceptors on unmount
     return () => {
-      axios.interceptors.response.eject(interceptor);
+      axios.interceptors.request.eject(requestInterceptor);
+      axios.interceptors.response.eject(responseInterceptor);
     };
   }, [isRefreshing, refreshAccessToken]);
 
@@ -205,11 +227,16 @@ export const AuthProvider = ({ children }) => {
     try {
       setAuthError('');
       
+      console.log('Attempting login to:', `${BASE_URL}/login`);
+      
       // Make sure withCredentials is true to receive cookies
       const response = await axios.post(
         `${BASE_URL}/login`,
         { email, password },
-        { withCredentials: true }
+        { 
+          withCredentials: true,
+          timeout: 10000 // 10 second timeout
+        }
       );
 
       if (response.data.status === "Success") {
@@ -237,10 +264,16 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Login failed:', error);
-      setAuthError(
-        error.response?.data?.message || 
-        'Login failed. Please check your credentials and try again.'
-      );
+      
+      let errorMessage = 'Login failed. Please check your credentials and try again.';
+      
+      if (error.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setAuthError(errorMessage);
       throw error;
     }
   };

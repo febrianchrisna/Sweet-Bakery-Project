@@ -10,11 +10,12 @@ dotenv.config();
 
 const app = express();
 
-// Configure CORS for credentials
+// Configure CORS for deployment
 app.use(cors({
   // Allow requests from these origins (add your frontend URL)
   origin: [
     'https://frontend-bakery-dot-g-09-450802.uc.r.appspot.com',
+    'https://bakery-fe-663618957788.us-central1.run.app',
     'http://localhost:3000'
   ],
   // Allow credentials (cookies)
@@ -22,10 +23,13 @@ app.use(cors({
   // Allowed HTTP methods
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   // Allowed headers
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   // Expose headers that frontend can access
   exposedHeaders: ['Set-Cookie']
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Parse cookies - set proper options
 app.use(cookieParser());

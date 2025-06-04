@@ -1,5 +1,5 @@
-// API base URL
-export const BASE_URL = process.env.REACT_APP_API_URL || 'https://backend-bakery-dot-g-09-450802.uc.r.appspot.com';
+// API base URL - Updated to match your deployed backend
+export const BASE_URL = process.env.REACT_APP_API_URL || 'https://bakery-be-663618957788.us-central1.run.app';
 
 // Format currency
 export const formatCurrency = (amount) => {

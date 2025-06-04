@@ -111,14 +111,14 @@ async function login(req, res) {
             }
           );
   
-          // Set refresh token in HTTP-only cookie for deployment
+          // Set refresh token in HTTP-only cookie for Cloud Run
           res.cookie("refresh_token", refreshToken, {
             httpOnly: true,
-            sameSite: "none", // Required for cross-origin cookies in deployment
+            sameSite: "none", // Required for cross-origin cookies
             maxAge: 24 * 60 * 60 * 1000, // 1 day
-            secure: true, // Always true for deployment (HTTPS)
+            secure: true, // Always true for HTTPS deployment
             path: "/",
-            domain: ".appspot.com" // Allow across subdomains
+            // Don't set domain for Cloud Run - let it default
           });
   
           // Send access token in response body for localStorage
@@ -163,13 +163,12 @@ async function logout(req, res) {
       );
     }
     
-    // Clear refresh token cookie with same settings used to set it
+    // Clear refresh token cookie with same settings
     res.clearCookie("refresh_token", {
       httpOnly: true,
       sameSite: "none",
       secure: true,
       path: "/",
-      domain: ".appspot.com"
     });
     
     res.status(200).json({
