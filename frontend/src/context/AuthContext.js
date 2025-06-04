@@ -11,6 +11,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
   const [token, setToken] = useState(localStorage.getItem('auth_token') || null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshSubscribers, setRefreshSubscribers] = useState([]);
+  const [tokenExpiryTime, setTokenExpiryTime] = useState(null);
 
   // Configure axios to use authorization header for every request when token exists
   useEffect(() => {
@@ -22,6 +25,122 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
     }
   }, [token]);
+
+  // Function to refresh token - now using cookies
+  const refreshAccessToken = async () => {
+    try {
+      setIsRefreshing(true);
+      
+      // Make a request to the refresh token endpoint
+      // The refresh token is automatically sent in cookies due to withCredentials: true
+      const response = await axios.get(`${BASE_URL}/token`, {
+        withCredentials: true // Important to include cookies in the request
+      });
+      
+      if (response.data.status === 'Success' && response.data.accessToken) {
+        // Update access token in local storage and state
+        localStorage.setItem('auth_token', response.data.accessToken);
+        setToken(response.data.accessToken);
+        
+        // Calculate and store token expiry time (30 minutes from now, but refresh 1 minute early)
+        const expiryTime = new Date().getTime() + 29 * 60 * 1000; // 29 minutes in ms
+        setTokenExpiryTime(expiryTime);
+        
+        return response.data.accessToken;
+      } else {
+        throw new Error('Failed to refresh token');
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      // Force logout on refresh failure
+      logout();
+      throw error;
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Add subscribers to be executed after token refresh
+  const subscribeToTokenRefresh = (callback) => {
+    setRefreshSubscribers(prev => [...prev, callback]);
+  };
+
+  // Execute all subscribers after token refresh
+  const onTokenRefreshed = (newToken) => {
+    refreshSubscribers.forEach(callback => callback(newToken));
+    setRefreshSubscribers([]);
+  };
+
+  // Set up a timer to refresh the token before it expires
+  useEffect(() => {
+    // Only set up timer if we have a token and expiry time
+    if (token && tokenExpiryTime) {
+      const currentTime = new Date().getTime();
+      const timeUntilRefresh = tokenExpiryTime - currentTime;
+      
+      // Only set timer if the token is not already expired
+      if (timeUntilRefresh > 0) {
+        const refreshTimer = setTimeout(() => {
+          refreshAccessToken()
+            .catch(error => console.error('Failed to refresh token:', error));
+        }, timeUntilRefresh);
+        
+        // Clean up timer
+        return () => clearTimeout(refreshTimer);
+      } else {
+        // If token is already expired, refresh it immediately
+        refreshAccessToken()
+          .catch(error => console.error('Failed to refresh token:', error));
+      }
+    }
+  }, [token, tokenExpiryTime]);
+
+  // Set up axios interceptors for token refresh
+  useEffect(() => {
+    // Configure axios globally to include credentials for all requests
+    axios.defaults.withCredentials = true;
+    
+    // Add a response interceptor to handle token expiration
+    const interceptor = axios.interceptors.response.use(
+      response => response,
+      async error => {
+        const originalRequest = error.config;
+        
+        // If error is 401 (Unauthorized) and not a retry attempt
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+          
+          if (isRefreshing) {
+            // If already refreshing, wait for the new token
+            return new Promise((resolve) => {
+              subscribeToTokenRefresh((newToken) => {
+                originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+                resolve(axios(originalRequest));
+              });
+            });
+          } else {
+            try {
+              // Attempt to refresh the token
+              const newToken = await refreshAccessToken();
+              originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+              onTokenRefreshed(newToken);
+              return axios(originalRequest);
+            } catch (refreshError) {
+              // If refresh fails, redirect to login
+              return Promise.reject(refreshError);
+            }
+          }
+        }
+        
+        return Promise.reject(error);
+      }
+    );
+    
+    // Clean up interceptor on unmount
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, [isRefreshing]); // Only re-initialize when isRefreshing changes
 
   useEffect(() => {
     // Check if user is already authenticated via token in localStorage
@@ -42,6 +161,10 @@ export const AuthProvider = ({ children }) => {
           setUser(userData);
           setIsAuthenticated(true);
           setIsAdmin(userData.role === 'admin');
+          
+          // Calculate token expiry (assume token was recently issued)
+          const expiryTime = new Date().getTime() + 29 * 60 * 1000; // 29 minutes in ms
+          setTokenExpiryTime(expiryTime);
         } catch (error) {
           console.log('Stored token invalid, clearing auth data');
           localStorage.removeItem('auth_token');
@@ -54,11 +177,6 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuth();
-  }, []);
-
-  // Configure axios globally to include credentials for all requests
-  useEffect(() => {
-    axios.defaults.withCredentials = true;
   }, []);
 
   // Login function
@@ -77,10 +195,14 @@ export const AuthProvider = ({ children }) => {
         // Store user data in localStorage
         localStorage.setItem('auth_user', JSON.stringify(response.data.safeUserData));
         
-        // For fallback, store tokens in case cookies don't work
+        // Store access token in localStorage
         if (response.data.accessToken) {
           localStorage.setItem('auth_token', response.data.accessToken);
           setToken(response.data.accessToken);
+          
+          // Calculate token expiry time (30 minutes from now, but refresh 1 minute early)
+          const expiryTime = new Date().getTime() + 29 * 60 * 1000; // 29 minutes in ms
+          setTokenExpiryTime(expiryTime);
         }
         
         // Update state
@@ -160,11 +282,11 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       setIsAdmin(false);
+      setTokenExpiryTime(null);
       
       // Remove from localStorage
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
-      localStorage.removeItem('refresh_token');
       
       // Clear Authorization header
       delete axios.defaults.headers.common['Authorization'];
@@ -185,9 +307,9 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       setIsAdmin(false);
+      setTokenExpiryTime(null);
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
-      localStorage.removeItem('refresh_token');
       delete axios.defaults.headers.common['Authorization'];
     }
   };
@@ -203,7 +325,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     authError,
-    token
+    token,
+    refreshAccessToken
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
