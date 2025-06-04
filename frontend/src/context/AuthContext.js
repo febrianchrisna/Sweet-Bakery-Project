@@ -32,10 +32,13 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsRefreshing(true);
       
+      console.log('Attempting to refresh token using cookies...');
+      
       // Make a request to the refresh token endpoint
       // The refresh token is automatically sent in cookies due to withCredentials: true
       const response = await axios.get(`${BASE_URL}/token`, {
-        withCredentials: true // Important to include cookies in the request
+        withCredentials: true, // Important to include cookies in the request
+        timeout: 10000
       });
       
       if (response.data.status === 'Success' && response.data.accessToken) {
@@ -50,14 +53,23 @@ export const AuthProvider = ({ children }) => {
         console.log('Token refreshed successfully, next refresh in 25 seconds');
         return response.data.accessToken;
       } else {
-        throw new Error('Failed to refresh token');
+        throw new Error('Failed to refresh token - no access token in response');
       }
     } catch (error) {
       console.error('Token refresh failed:', error);
-      // Only logout if it's a 403 error (invalid refresh token)
-      if (error.response?.status === 403) {
-        console.log('Refresh token invalid, logging out');
+      
+      // Check if it's a network error first
+      if (error.code === 'ERR_NETWORK') {
+        console.log('Network error during refresh - will retry later');
+        throw error; // Don't logout on network errors
+      }
+      
+      // Only logout if it's a 403 error (invalid refresh token) or 401 (unauthorized)
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        console.log('Refresh token invalid or expired, logging out');
         logout();
+      } else {
+        console.log('Refresh failed with status:', error.response?.status, '- will retry later');
       }
       throw error;
     } finally {
@@ -119,43 +131,34 @@ export const AuthProvider = ({ children }) => {
     // Configure axios globally to include credentials for all requests
     axios.defaults.withCredentials = true;
     
-    // Add request interceptor for debugging
-    const requestInterceptor = axios.interceptors.request.use(
-      config => {
-        console.log('Making request to:', config.url);
-        console.log('With credentials:', config.withCredentials);
-        return config;
-      },
-      error => {
-        console.error('Request error:', error);
-        return Promise.reject(error);
-      }
-    );
-    
     // Add a response interceptor to handle token expiration
     const responseInterceptor = axios.interceptors.response.use(
       response => response,
       async error => {
-        console.error('Response error:', error);
+        const originalRequest = error.config;
         
-        // Handle network errors
+        // Handle network errors - don't logout
         if (error.code === 'ERR_NETWORK') {
-          console.error('Network error - check if backend is running and CORS is configured');
+          console.error('Network error - backend might be down');
           return Promise.reject(error);
         }
 
-        const originalRequest = error.config;
-        
         // If error is 401 (Unauthorized) and not a retry attempt
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
           
+          console.log('Got 401, attempting to refresh token...');
+          
           if (isRefreshing) {
             // If already refreshing, wait for the new token
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
               subscribeToTokenRefresh((newToken) => {
-                originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-                resolve(axios(originalRequest));
+                if (newToken) {
+                  originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+                  resolve(axios(originalRequest));
+                } else {
+                  reject(error);
+                }
               });
             });
           } else {
@@ -166,7 +169,8 @@ export const AuthProvider = ({ children }) => {
               onTokenRefreshed(newToken);
               return axios(originalRequest);
             } catch (refreshError) {
-              // If refresh fails, don't retry the original request
+              console.error('Failed to refresh token for retry:', refreshError);
+              // Don't automatically logout here - let refreshAccessToken handle it
               return Promise.reject(refreshError);
             }
           }
@@ -178,10 +182,9 @@ export const AuthProvider = ({ children }) => {
     
     // Clean up interceptors on unmount
     return () => {
-      axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
-  }, [isRefreshing, refreshAccessToken]);
+  }, [isRefreshing, refreshAccessToken, subscribeToTokenRefresh, onTokenRefreshed]);
 
   useEffect(() => {
     // Check if user is already authenticated via token in localStorage
@@ -203,9 +206,16 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true);
           setIsAdmin(userData.role === 'admin');
           
-          // Start the refresh cycle immediately for existing sessions
-          const expiryTime = new Date().getTime() + 25 * 1000; // 25 seconds in ms
-          setTokenExpiryTime(expiryTime);
+          // Try to refresh token immediately to check if refresh token cookie is still valid
+          console.log('Checking if refresh token cookie is still valid...');
+          try {
+            await refreshAccessToken();
+          } catch (refreshError) {
+            console.log('Refresh token not valid, but keeping user logged in temporarily');
+            // Set a shorter expiry to force refresh attempt soon
+            const expiryTime = new Date().getTime() + 5 * 1000; // 5 seconds
+            setTokenExpiryTime(expiryTime);
+          }
           
           console.log('Restored authentication from localStorage');
         } catch (error) {
@@ -220,7 +230,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuth();
-  }, []);
+  }, [refreshAccessToken]);
 
   // Login function
   const login = async (email, password) => {

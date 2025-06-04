@@ -3,20 +3,18 @@ import jwt from "jsonwebtoken";
 
 export const refreshToken = async (req, res) => {
   try {
-    // Try to get the refresh token from different sources (body, authorization header)
-    const refreshToken =
-      req.body.refreshToken ||
-      (req.headers.authorization &&
-        req.headers.authorization.startsWith("Bearer ") &&
-        req.headers.authorization.split(" ")[1]) ||
-      req.cookies.refresh_token; // Also check for refresh token in cookies
+    // Get the refresh token from cookies
+    const refreshToken = req.cookies.refresh_token;
+
+    console.log('Refresh token from cookies:', refreshToken ? 'Present' : 'Not found');
 
     // If no refresh token is provided
-    if (!refreshToken)
+    if (!refreshToken) {
       return res.status(401).json({
         status: "Error",
-        message: "Refresh token required",
+        message: "Refresh token required - no cookie found",
       });
+    }
 
     // Find user with this refresh token
     const user = await User.findOne({
@@ -29,7 +27,7 @@ export const refreshToken = async (req, res) => {
     if (!user || !user.refresh_token) {
       return res.status(403).json({
         status: "Error",
-        message: "Invalid refresh token",
+        message: "Invalid refresh token - user not found or token mismatch",
       });
     }
 
@@ -39,6 +37,7 @@ export const refreshToken = async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET,
       (err, decoded) => {
         if (err) {
+          console.log('JWT verification failed:', err.message);
           return res.status(403).json({
             status: "Error",
             message: "Invalid or expired refresh token",
@@ -53,9 +52,11 @@ export const refreshToken = async (req, res) => {
           safeUserData,
           process.env.ACCESS_TOKEN_SECRET,
           {
-            expiresIn: "30s", // 30 seconds, not minutes
+            expiresIn: "30s", // 30 seconds
           }
         );
+
+        console.log('New access token generated successfully');
 
         // Return the new access token
         res.json({

@@ -111,15 +111,16 @@ async function login(req, res) {
             }
           );
   
-          // Set refresh token in HTTP-only cookie for Cloud Run
+          // Set refresh token in HTTP-only cookie
           res.cookie("refresh_token", refreshToken, {
             httpOnly: true,
             sameSite: "none", // Required for cross-origin cookies
             maxAge: 24 * 60 * 60 * 1000, // 1 day
             secure: true, // Always true for HTTPS deployment
             path: "/",
-            // Don't set domain for Cloud Run - let it default
           });
+
+          console.log('Refresh token cookie set successfully');
   
           // Send access token in response body for localStorage
           res.status(200).json({
