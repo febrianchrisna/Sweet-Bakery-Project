@@ -90,7 +90,7 @@ async function login(req, res) {
             safeUserData,
             process.env.ACCESS_TOKEN_SECRET,
             {
-              expiresIn: "30m",
+              expiresIn: "30s", // Changed from "30m" to "30s" for 30 seconds
             }
           );
   
