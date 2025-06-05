@@ -9,7 +9,6 @@ Proyek Sweet Bakery adalah aplikasi web full-stack untuk manajemen toko roti onl
 - **Keranjang Belanja**: Menambah, mengedit, dan menghapus item
 - **Sistem Pemesanan**: Checkout dan tracking status pesanan
 - **Dashboard Admin**: Manajemen produk dan pesanan
-- **Responsive Design**: Tampilan yang optimal di semua perangkat
 
 ## 🚀 Teknologi yang Digunakan
 
